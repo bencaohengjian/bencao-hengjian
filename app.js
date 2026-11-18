@@ -4,7 +4,7 @@
 
   var CONFIG = {
     SECRET: 'BHJ-2026-h5-v1',
-    CONTACT: '开通/续期：请回原购买平台（闲鱼/小红书）私信我',
+    CONTACT: '微信：a-Medical-l',
     BUY_URL: '',
     TOTAL_Q: 478,
     TOTAL_C: 275,
