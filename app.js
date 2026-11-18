@@ -16,7 +16,7 @@
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open' }
   var S = {
     data: null, full: null, auth: null, tab: 'kb',
-    group: '', kw: '', openChap: {}, openCard: {},
+    group: '', kw: '', openChap: {}, openCard: {}, deckPos: {},
     unit: null, queue: [], qi: 0, picked: null, answered: false
   }
 
@@ -124,9 +124,22 @@
       (c.sections || []).map(function (s) { return s.label + s.items.join(' ') }).join(' ')).toLowerCase()
     return hay.indexOf(kw) >= 0
   }
+  function cardHtml(x) {
+    var body = (x.sections || []).map(function (s) {
+      return '<div class="sect"><div class="lb">' + esc(s.label) + '</div><ul>' +
+        s.items.map(function (it) { return '<li>' + esc(it) + '</li>' }).join('') + '</ul></div>'
+    }).join('')
+    var vn = (S.full && S.full.varCards && S.full.varCards[x.id]) || 0
+    if (vn) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出 ' + Math.min(6, vn) + ' 道新题</button>'
+    if (x.tags && x.tags.length) body += '<div class="tags">' + x.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>' }).join('') + '</div>'
+    return '<div class="deck-card" data-card="' + esc(x.id) + '">' +
+      '<div class="ctitle"><span class="kind">' + esc(x.kindLabel || '') + '</span><span>' + esc(x.title) + '</span></div>' +
+      '<p class="csum">' + esc(x.summary || '') + '</p>' + body + '</div>'
+  }
   function renderKb() {
     var d = kb(), kw = S.kw.trim().toLowerCase()
     var chaps = d.chapters.filter(function (c) { return !S.group || c.group === S.group })
+    if (!kw && !S.autoOpenDone && chaps.length) { S.openChap[chaps[0].id] = true; S.autoOpenDone = true }
     var html = '', hit = 0
     chaps.forEach(function (c) {
       var cards = c.cards.filter(function (x) { return matchCard(x, kw) })
@@ -137,22 +150,13 @@
         '<span class="chap-name">' + esc(c.name) + '</span>' +
         '<span class="chap-meta">' + cards.length + ' 张 ' + (open ? '▾' : '›') + '</span></div>'
       if (open) {
-        html += '<div class="chap-body">' + cards.slice(0, 60).map(function (x) {
-          var isOpen = !!S.openCard[x.id] || !!kw
-          var body = ''
-          if (isOpen) {
-            body = (x.sections || []).map(function (s) {
-              return '<div class="sect"><div class="lb">' + esc(s.label) + '</div><ul>' +
-                s.items.map(function (it) { return '<li>' + esc(it) + '</li>' }).join('') + '</ul></div>'
-            }).join('')
-            var vn = (S.full && S.full.varCards && S.full.varCards[x.id]) || 0
-            if (vn) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出 ' + Math.min(6, vn) + ' 道新题</button>'
-            if (x.tags && x.tags.length) body += '<div class="tags">' + x.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>' }).join('') + '</div>'
-          }
-          return '<div class="carditem" data-card="' + esc(x.id) + '">' +
-            '<div class="ctitle"><span class="kind">' + esc(x.kindLabel || '') + '</span><span>' + esc(x.title) + '</span></div>' +
-            '<p class="csum">' + esc(x.summary || '') + '</p>' + body + '</div>'
-        }).join('') + '</div>'
+        html += '<div class="deck" data-deck="' + esc(c.id) + '">' +
+          '<div class="deck-bar">' +
+          '<button class="dnav" data-deck-go="' + esc(c.id) + '" data-dir="-1" aria-label="上一张">‹</button>' +
+          '<span class="deck-pos" id="pos-' + esc(c.id) + '">1 / ' + cards.length + '</span>' +
+          '<button class="dnav" data-deck-go="' + esc(c.id) + '" data-dir="1" aria-label="下一张">›</button>' +
+          '<span class="deck-tip">左右滑动切换</span></div>' +
+          '<div class="deck-track" data-track="' + esc(c.id) + '">' + cards.map(cardHtml).join('') + '</div></div>'
       }
       html += '</div>'
     })
@@ -161,6 +165,34 @@
     $('kbOpen').textContent = shown
     $('kbLock').textContent = Math.max(0, CONFIG.TOTAL_C - shown)
     $('kbGate').hidden = isActive()
+    restoreDecks()
+  }
+
+  /* ---------- 卡片左右滑动 ---------- */
+  function trackOf(cid) {
+    var el = $('chapList').querySelector('[data-track="' + cid + '"]')
+    return el
+  }
+  function deckIdx(track) {
+    if (!track.clientWidth) return 0
+    return Math.round(track.scrollLeft / track.clientWidth)
+  }
+  function syncDeck(track) {
+    var cid = track.dataset.track
+    var pos = document.getElementById('pos-' + cid)
+    if (pos) pos.textContent = (Math.min(deckIdx(track), track.children.length - 1) + 1) + ' / ' + track.children.length
+    S.deckPos[cid] = deckIdx(track)
+  }
+  function restoreDecks() {
+    ;[].forEach.call($('chapList').querySelectorAll('.deck-track'), function (t) {
+      var i = S.deckPos[t.dataset.track] || 0
+      if (i) t.scrollLeft = i * t.clientWidth
+    })
+  }
+  function deckGo(cid, dir) {
+    var t = trackOf(cid)
+    if (!t) return
+    t.scrollBy({ left: dir * t.clientWidth, behavior: 'smooth' })
   }
 
   /* ---------- 渲染：刷题 ---------- */
@@ -383,14 +415,31 @@
     $('chapList').onclick = function (e) {
       var vb = e.target.closest('[data-vcard]')
       if (vb) { e.stopPropagation(); openVariants(vb.dataset.vcard); return }
-      var card = e.target.closest('.carditem')
-      if (card) {
-        var id = card.dataset.card
-        S.openCard[id] = !S.openCard[id]; renderKb(); return
-      }
+      var nav = e.target.closest('[data-deck-go]')
+      if (nav) { e.stopPropagation(); deckGo(nav.dataset.deckGo, Number(nav.dataset.dir)); return }
       var head = e.target.closest('.chap-head')
       if (head) { var cid = head.dataset.chap; S.openChap[cid] = !S.openChap[cid]; renderKb() }
     }
+    $('chapList').addEventListener('scroll', function (e) {
+      var t = e.target
+      if (t && t.classList && t.classList.contains('deck-track')) syncDeck(t)
+    }, true)
+    $('chapList').addEventListener('wheel', function (e) {
+      var t = e.target.closest ? e.target.closest('.deck-track') : null
+      if (!t) return
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); t.scrollLeft += e.deltaX }
+    }, { passive: false })
+    document.addEventListener('keydown', function (e) {
+      if (S.tab !== 'kb' || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+      if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return
+      var vis = [].filter.call($('chapList').querySelectorAll('.deck-track'), function (t) {
+        var r = t.getBoundingClientRect()
+        return r.bottom > 70 && r.top < window.innerHeight - 40
+      })
+      if (!vis.length) return
+      e.preventDefault()
+      deckGo(vis[0].dataset.track, e.key === 'ArrowRight' ? 1 : -1)
+    })
     $('unitList').onclick = function (e) {
       var u = e.target.closest('.unit'); if (!u) return
       var id = u.dataset.unit
