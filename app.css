@@ -80,11 +80,12 @@ h1{margin:0;font-size:31px;letter-spacing:4px;font-weight:700}
 .dnav:active{background:#f1e8d3}
 .deck-pos{font-size:12px;color:#8a6a1d;font-weight:700;min-width:52px;text-align:center}
 .deck-tip{font-size:11px;color:var(--muted);margin-left:auto}
-.deck-track{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
+.deck-track{display:flex;align-items:flex-start;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
   -webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
 .deck-track::-webkit-scrollbar{display:none}
 .deck-card{flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always;box-sizing:border-box;
-  padding:2px 16px 16px;border-left:1px solid #efe7d4}
+  padding:2px 16px 14px;border-left:1px solid #efe7d4;max-height:100%;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .deck-card:first-child{border-left:0}
 .deck-card .ctitle{margin-top:8px}
 .mock{padding:22px;text-align:center;color:#8a8474;font-size:13px}

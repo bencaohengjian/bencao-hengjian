@@ -182,11 +182,31 @@
     var pos = document.getElementById('pos-' + cid)
     if (pos) pos.textContent = (Math.min(deckIdx(track), track.children.length - 1) + 1) + ' / ' + track.children.length
     S.deckPos[cid] = deckIdx(track)
+    scheduleFit(track)
+  }
+  var deckTimers = {}
+  function fitDeck(t) {
+    if (!t || !t.clientWidth) return
+    t.style.height = 'auto'
+    var card = t.children[deckIdx(t)]
+    var natural = card ? card.getBoundingClientRect().height : 300
+    var maxH = Math.round(Math.min(window.innerHeight * 0.7, 620))
+    var h = Math.max(150, Math.min(Math.round(natural), maxH))
+    t.style.height = h + 'px'
+  }
+  function fitAll() {
+    ;[].forEach.call($('chapList').querySelectorAll('.deck-track'), fitDeck)
+  }
+  function scheduleFit(t) {
+    var id = t.dataset.track
+    clearTimeout(deckTimers[id])
+    deckTimers[id] = setTimeout(function () { fitDeck(t) }, 130)
   }
   function restoreDecks() {
     ;[].forEach.call($('chapList').querySelectorAll('.deck-track'), function (t) {
       var i = S.deckPos[t.dataset.track] || 0
       if (i) t.scrollLeft = i * t.clientWidth
+      fitDeck(t)
     })
   }
   function deckGo(cid, dir) {
@@ -429,6 +449,7 @@
       if (!t) return
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); t.scrollLeft += e.deltaX }
     }, { passive: false })
+    window.addEventListener('resize', function () { fitAll() })
     document.addEventListener('keydown', function (e) {
       if (S.tab !== 'kb' || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
       if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return
