@@ -3,7 +3,7 @@
 一个纯静态网页 App：手机浏览器打开链接即用，无需安装、无需小程序审核、不需要服务器。
 试看 68 题 / 23 张卡；付款后给开通码，输入即解锁全部 478 题、275 张知识卡，并可按知识点一键生成 6 道同考点新题（举一反三）。
 
-**正式链接**：https://123liuyulin.github.io/bencao-hengjian/
+**正式链接**：https://bencaohengjian.github.io/bencao-hengjian/
 仓库：https://github.com/123Liuyulin/bencao-hengjian （Public，main 分支根目录直接发布）
 
 ## 一、线上结构
