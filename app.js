@@ -10,7 +10,7 @@
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20p'
+    BUILD: '2026-11-20q'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
@@ -177,7 +177,7 @@
         s.items.map(function (it) { return '<li>' + esc(it) + '</li>' }).join('') + '</ul></div>'
     }).join('')
     var vn = varCards()[x.id] || 0
-    if (vn) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出 ' + Math.min(6, vn) + ' 道新题</button>'
+    if (vn || isActive()) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出' + (vn ? ' ' + Math.min(6, vn) + ' 道新题' : '新题') + '</button>'
     if (x.tags && x.tags.length) body += '<div class="tags">' + x.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>' }).join('') + '</div>'
     return '<div class="deck-card" data-card="' + esc(x.id) + '">' +
       '<div class="ctitle"><span class="kind">' + esc(x.kindLabel || '') + '</span><span>' + esc(x.title) + '</span></div>' +
