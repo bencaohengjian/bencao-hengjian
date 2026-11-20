@@ -10,7 +10,7 @@
     TOTAL_C: 275,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20d'
+    BUILD: '2026-11-20e'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode' }
@@ -287,7 +287,7 @@
     ;['single', 'fill', 'short', 'essay', 'term'].forEach(function (k) { if (b[k]) allQ += b[k].length })
     var done = ls(LS.stat, {}), todayDone = done.date === today() ? done.done : 0
     $('cDone').textContent = todayDone
-    $('unitHint').textContent = '共 ' + b.units.length + ' 个单元 · ' + allQ + ' 题'
+    $('unitHint').textContent = '共 ' + b.units.length + ' 个单元 · ' + allQ + ' 题' + (isActive() && !S.full ? ' · 题库加载中…' : '')
     $('unitList').innerHTML = b.units.map(function (u) {
       var n = objItems(u.id).length || (b.meta.uc && b.meta.uc[u.id]) || 0
       var lock = !isActive() && freeUnits().indexOf(u.id) < 0
