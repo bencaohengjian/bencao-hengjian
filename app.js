@@ -10,15 +10,15 @@
     TOTAL_C: 275,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20e'
+    BUILD: '2026-11-20f'
   }
 
-  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode' }
+  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
   var S = {
     data: null, full: null, auth: null, tab: 'kb', subj: '',
     group: '', kw: '', openChap: {}, openCard: {}, deckPos: {},
     unit: null, queue: [], qi: 0, picked: null, answered: false,
-    qmode: 'quiz', ansHidden: false
+    qmode: 'quiz', ansHidden: false, shuffle: false
   }
 
   function $(id) { return document.getElementById(id) }
@@ -313,6 +313,10 @@
     ;[].forEach.call($('modeBar').children, function (b) {
       b.classList.toggle('on', (b.dataset.mode || 'quiz') === S.qmode)
     })
+    $('orderBar').hidden = S.qmode !== 'recite'
+    ;[].forEach.call($('orderBar').querySelectorAll('.orderbtn'), function (b) {
+      b.classList.toggle('on', (b.dataset.order === 'rand') === !!S.shuffle)
+    })
     $('modeHint').textContent = S.qmode === 'recite'
       ? '背题模式：进入单元后答案直接显示，勾对正确选项并给出解析，只看不判对错、不记错题。'
       : '做题模式：选单元直接作答，提交后判对错，错题自动进错题本。'
@@ -391,11 +395,24 @@
   /* ---------- 做题 ---------- */
   function openQueue(items, label, mode) {
     if (!items.length) { toast('这个范围暂时没有题目'); return }
-    S.queue = items; S.qi = 0; S.label = label
+    S.queue = items.slice(); S.qi = 0; S.label = label
     if (mode) S.qmode = mode
+    if (S.qmode === 'recite') {
+      $('qShuffle').hidden = false
+      if (S.shuffle) S.queue = shuffleArr(S.queue)
+    } else {
+      $('qShuffle').hidden = true
+    }
     $('unitView').hidden = true
     $('quizView').hidden = false
     renderQ()
+  }
+  function shuffleArr(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1))
+      var t = a[i]; a[i] = a[j]; a[j] = t
+    }
+    return a
   }
   function isMulti(q) { return String(q.a == null ? '' : q.a).replace(/[^A-Za-z]/g, '').length > 1 }
   function renderQ() {
@@ -607,6 +624,19 @@
       }
       $('qSubmit').disabled = !S.picked
     }
+    if ($('orderBar')) {
+      $('orderBar').onclick = function (e) {
+        var b = e.target.closest('.orderbtn'); if (!b) return
+        S.shuffle = b.dataset.order === 'rand'
+        lsSet(LS.shuffle, S.shuffle)
+        syncModeUI()
+        toast(S.shuffle ? '背题顺序：随机（进单元时打乱）' : '背题顺序：顺序')
+      }
+    }
+    $('qShuffle').onclick = function () {
+      S.queue = shuffleArr(S.queue); S.qi = 0; renderQ()
+      toast('已打乱，从头再背一遍')
+    }
     $('qSubmit').onclick = answerObjective
     $('showAns').onclick = function () { $('qAns').hidden = !$('qAns').hidden }
     $('qHide').onclick = function () {
@@ -685,6 +715,7 @@
       $('upd').textContent = (kb() && kb().meta && kb().meta.updatedAt) ? '资料更新 ' + kb().meta.updatedAt : ''
       S.auth = ls(LS.auth, null)
       S.qmode = ls(LS.mode, 'quiz') === 'recite' ? 'recite' : 'quiz'
+      S.shuffle = !!ls(LS.shuffle, false)
       bind()
       renderSubjChips()
       refreshAll()
