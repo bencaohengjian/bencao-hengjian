@@ -10,6 +10,9 @@ button{background:#c8a03c;color:#17211d;font-weight:600;border:0;margin-left:8px
 <p style="color:#9aa79f;font-size:13px">用户用个人收款码付款后，在这里点“确认到账”，系统立即发码；用户购买页会自动收到。</p>
 <input id="token" placeholder="管理口令 ADMIN_TOKEN"><button onclick="load()">查询待处理</button>
 <div id="list"></div>
+<p style="color:#9aa79f;font-size:13px;margin-top:18px">已付款但用户没拿到码，可按订单号补查。</p>
+<input id="find" placeholder="订单号 BH..."><button onclick="findOrder()">查订单</button>
+<div id="findBox" class="code"></div>
 <script>
 var BASE='https://bottom-cougar-d0gbb0pyuf50e428f-1536516331.ap-shanghai.app.tcloudbase.com';
 function load(){
@@ -19,6 +22,17 @@ function load(){
     if(!d.ok){box.textContent=d.msg;return}
     if(!d.list.length){box.textContent='暂无待处理订单';return}
     box.innerHTML=d.list.map(o=>'<div class="row"><div>'+o.title+' · ¥'+o.amount.toFixed(1)+'<div style="color:#9aa79f;font-size:12px">'+o.no+' · 尾号 '+o.no.slice(-6)+'</div><div class="code" id="c'+o.no+'"></div></div><button onclick="ok(\''+o.no+'\',\''+o.no.slice(-6)+'\')">确认到账</button></div>').join('')
+  })
+}
+function findOrder(){
+  var no=document.getElementById('find').value.trim()
+  if(!no){document.getElementById('findBox').textContent='请输入订单号';return}
+  fetch(BASE+'/api?action=query',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'query',orderNo:no})})
+  .then(r=>r.json()).then(d=>{
+    var box=document.getElementById('findBox')
+    if(!d.ok){box.textContent=d.msg;return}
+    if(d.status==='paid'){box.textContent='已付款 · '+(d.plan==='A'?'全科':'单科')+' · 码：'+d.code}
+    else {box.textContent='订单还在待确认，请点上方确认到账。'}
   })
 }
 function ok(no, tail){
