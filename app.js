@@ -10,7 +10,7 @@
     TOTAL_C: 275,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20c'
+    BUILD: '2026-11-20d'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode' }
@@ -126,7 +126,9 @@
   }
 
   function decryptFull() {
-    return readFull().then(function (txt) {
+    if (S.full) return Promise.resolve(true)
+    if (S.fullLoading) return S.fullLoading
+    S.fullLoading = readFull().then(function (txt) {
       var parts = txt.trim().split('.')
       var iv = b64(parts[0]), ct = b64(parts[1])
       return sha256hex(CONFIG.SECRET).then(function (hex) {
@@ -140,6 +142,8 @@
         return true
       })
     }).catch(function () { return false })
+    S.fullLoading.then(function (ok) { if (!ok) S.fullLoading = null })
+    return S.fullLoading
   }
   function b64(s) {
     var bin = atob(s), arr = new Uint8Array(bin.length)
@@ -573,7 +577,18 @@
       var u = e.target.closest('.unit'); if (!u) return
       var id = u.dataset.unit
       if (!isActive() && freeUnits().indexOf(id) < 0) { go('me'); toast('该单元需开通后使用'); return }
-      openQueue(S.qmode === 'recite' ? unitItems(id) : objItems(id), unitName(id), S.qmode)
+      var items = S.qmode === 'recite' ? unitItems(id) : objItems(id)
+      if (!items.length && isActive() && !S.full) {
+        toast('资料加载中，马上进入…')
+        decryptFull().then(function (ok) {
+          refreshAll()
+          var again = S.qmode === 'recite' ? unitItems(id) : objItems(id)
+          if (ok && again.length) openQueue(again, unitName(id), S.qmode)
+          else toast('资料加载失败，请刷新页面重试')
+        })
+        return
+      }
+      openQueue(items, unitName(id), S.qmode)
     }
     $('qOpts').onclick = function (e) {
       var o = e.target.closest('.opt'); if (!o || S.answered) return
