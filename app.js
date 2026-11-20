@@ -6,11 +6,11 @@
     SECRET: 'BHJ-2026-h5-v1',
     CONTACT: '微信：a-Medical-l',
     BUY_URL: '',
-    TOTAL_Q: 478,
-    TOTAL_C: 275,
+    TOTAL_Q: 1354,
+    TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20i'
+    BUILD: '2026-11-20j'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
