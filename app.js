@@ -714,6 +714,7 @@
         lsSet(LS.auth, S.auth)
         if (merged !== 'all' && merged.indexOf(subjId()) < 0) pickSubject(merged[0])
         toast('已开通：' + planText(merged) + '，正在加载资料…')
+        renderSubjChips(); refreshAll()
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
           else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
