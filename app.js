@@ -10,7 +10,7 @@
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20m'
+    BUILD: '2026-11-20n'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
