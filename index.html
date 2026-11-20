@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>本草衡鉴 · 中药药理学刷题与知识卡</title>
-<meta name="description" content="中药药理学 478 题、275 张知识卡，按知识点一键出新题，手机在线刷题，前两个单元与两章知识卡免费试看。">
-<meta property="og:title" content="本草衡鉴 · 中药药理学刷题与知识卡">
-<meta property="og:description" content="478 题 · 275 张知识卡 · 按知识点举一反三出新题 · 错题本 · 在线随时用">
+<title>本草衡鉴 · 中药药理学 / 中药炮制学 刷题与知识卡</title>
+<meta name="description" content="本草衡鉴：中药药理学 478 题 / 275 张知识卡，中药炮制学 357 题 / 63 张知识卡。双学科一键切换，按知识点举一反三出新题，手机在线刷题，每科前两个单元与两章知识卡免费试看。">
+<meta property="og:title" content="本草衡鉴 · 中药药理学 / 中药炮制学">
+<meta property="og:description" content="双学科 · 835 题 · 338 张知识卡 · 举一反三出新题 · 错题本 · 在线随时用">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='%230d1512'/><text x='32' y='45' font-size='38' fill='%23c8a03c' text-anchor='middle' font-family='serif'>鉴</text></svg>">
-<link rel="stylesheet" href="app.css?v=2026-11-18f">
+<link rel="stylesheet" href="app.css?v=2026-11-20a">
 </head>
 <body>
 <div class="wrap">
@@ -17,7 +17,7 @@
     <div class="hero-top">
       <div>
         <h1>本草衡鉴</h1>
-        <p class="sub">中药药理学 · 刷题与知识卡</p>
+        <p class="sub">中药药理学 · 中药炮制学 · 刷题与知识卡</p>
       </div>
       <div class="seal">鉴</div>
     </div>
@@ -26,6 +26,7 @@
       <div><b id="cCards">275</b><span>知识卡</span></div>
       <div><b id="cDone">0</b><span>今日已做</span></div>
     </div>
+    <div class="chips subjs" id="subjChips"></div>
     <div class="banner" id="topBanner" hidden></div>
   </header>
 
@@ -38,7 +39,7 @@
   <main>
     <section id="view-kb" class="view on">
       <div class="gate" id="kbGate" hidden>
-        <span>试看版 · 已开放 <b id="kbOpen">23</b> 张，开通解锁剩余 <b id="kbLock">252</b> 张</span>
+        <span>试看版 · <b id="subjNameKb">本学科</b>已开放 <b id="kbOpen">23</b> 张，开通解锁剩余 <b id="kbLock">252</b> 张</span>
         <a class="gate-link" data-goto="me">开通 ›</a>
       </div>
       <div class="search"><input id="q" type="search" placeholder="搜药名、机制、靶点，如 麻黄" autocomplete="off"></div>
@@ -48,7 +49,7 @@
 
     <section id="view-quiz" class="view">
       <div class="gate" id="quizGate" hidden>
-        <span>试看版 · 已开放 <b id="quizOpen">2</b> 个单元 <b id="quizCnt">68</b> 题，开通解锁全部 478 题</span>
+        <span>试看版 · 已开放 <b id="quizOpen">2</b> 个单元 <b id="quizCnt">68</b> 题，开通解锁全部 <b id="fanGate">357</b> 题</span>
         <a class="gate-link" data-goto="me">开通 ›</a>
       </div>
 
@@ -83,6 +84,7 @@
 
     <section id="view-me" class="view">
       <div class="card">
+        <div class="row"><span>当前学科</span><b id="meSubj">—</b></div>
         <div class="row"><span>授权状态</span><b id="meStatus">试看中</b></div>
         <div class="row"><span>有效期</span><b id="meExpire">—</b></div>
         <div class="row"><span>题库版本</span><b id="meVer">—</b></div>
@@ -110,6 +112,6 @@
     <span id="upd"></span>
   </footer>
 </div>
-<script src="app.js?v=2026-11-18f"></script>
+<script src="app.js?v=2026-11-20a"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* 本草衡鉴 · 在线版 */
+/* 本草衡鉴 · 在线版 · 多学科 */
 (function () {
   'use strict'
 
@@ -8,14 +8,14 @@
     BUY_URL: '',
     TOTAL_Q: 478,
     TOTAL_C: 275,
-    FREE_UNITS: ['U01', 'U02'],
+    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-18c'
+    BUILD: '2026-11-20a'
   }
 
-  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open' }
+  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj' }
   var S = {
-    data: null, full: null, auth: null, tab: 'kb',
+    data: null, full: null, auth: null, tab: 'kb', subj: '',
     group: '', kw: '', openChap: {}, openCard: {}, deckPos: {},
     unit: null, queue: [], qi: 0, picked: null, answered: false
   }
@@ -30,6 +30,54 @@
     try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch (e) { return d }
   }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) {} }
+
+  /* ---------- 学科 ---------- */
+  function subjectList() {
+    var l = (S.full && S.full.subjects) || (S.data && S.data.subjects) || []
+    return l
+  }
+  function subj() {
+    var l = subjectList()
+    if (!l.length) return null
+    for (var i = 0; i < l.length; i++) if (l[i].id === S.subj) return l[i]
+    return l[0]
+  }
+  function subjId() { var s = subj(); return s ? s.id : '' }
+  function freeUnits() {
+    var id = subjId()
+    return (CONFIG.FREE_UNITS[id] || [])
+  }
+  function bank() { var s = subj(); return s && s.tiku ? s.tiku : null }
+  function kb() { var s = subj(); return s && s.kb ? s.kb : null }
+  function varCards() { var s = subj(); return (s && s.varCards) || {} }
+  function totalQ() { var b = bank(); return (b && b.meta && b.meta.total) || CONFIG.TOTAL_Q }
+  function totalC() { var d = kb(); return (d && d.meta && d.meta.stats && d.meta.stats.cards) || CONFIG.TOTAL_C }
+
+  function normalize(d) {
+    if (!d) return d
+    if (!d.subjects && (d.tiku || d.kb)) {
+      d.subjects = [{ id: 'yaoli', name: '中药药理学', short: '药理', tiku: d.tiku || null, kb: d.kb || null }]
+      d.default = 'yaoli'
+    }
+    if (!d.default && d.subjects && d.subjects.length) d.default = d.subjects[0].id
+    return d
+  }
+  function pickSubject(id) {
+    if (!id) return
+    S.subj = id
+    S.group = ''; S.kw = ''; S.openChap = {}; S.deckPos = {}; S.autoOpenDone = false
+    lsSet(LS.subj, id)
+    renderSubjChips(); refreshAll()
+    window.scrollTo(0, 0)
+  }
+  function renderSubjChips() {
+    var box = $('subjChips'); if (!box) return
+    var l = subjectList()
+    box.innerHTML = l.map(function (s) {
+      return '<button class="chip subj' + (s.id === subjId() ? ' on' : '') + '" data-subj="' + esc(s.id) + '">' +
+        esc(s.name || s.id) + '</button>'
+    }).join('')
+  }
 
   /* ---------- 授权 ---------- */
   function sha256hex(str) {
@@ -87,7 +135,7 @@
         })
       }).then(function (buf) {
         var obj = JSON.parse(new TextDecoder().decode(buf))
-        S.full = obj
+        S.full = normalize(obj)
         return true
       })
     }).catch(function () { return false })
@@ -102,16 +150,10 @@
     for (var i = 0; i < arr.length; i++) arr[i] = parseInt(hex.substr(i * 2, 2), 16)
     return arr
   }
-  function bank() { return (S.full && S.full.tiku) || (S.data && S.data.meta) && packTrialBank() }
-  function packTrialBank() {
-    var d = S.data
-    return { meta: d.meta, units: d.units, single: d.single, fill: d.fill, short: d.short, essay: d.essay, term: d.term }
-  }
-  function kb() { return (S.full && S.full.kb) || (S.data && S.data.kb) }
 
   /* ---------- 渲染：知识点 ---------- */
   function renderGroups() {
-    var g = kb().groups || []
+    var g = (kb() && kb().groups) || []
     var cur = S.group
     $('groups').innerHTML = ['全部'].concat(g).map(function (x) {
       var v = x === '全部' ? '' : x
@@ -129,7 +171,7 @@
       return '<div class="sect"><div class="lb">' + esc(s.label) + '</div><ul>' +
         s.items.map(function (it) { return '<li>' + esc(it) + '</li>' }).join('') + '</ul></div>'
     }).join('')
-    var vn = (S.full && S.full.varCards && S.full.varCards[x.id]) || 0
+    var vn = varCards()[x.id] || 0
     if (vn) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出 ' + Math.min(6, vn) + ' 道新题</button>'
     if (x.tags && x.tags.length) body += '<div class="tags">' + x.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>' }).join('') + '</div>'
     return '<div class="deck-card" data-card="' + esc(x.id) + '">' +
@@ -137,8 +179,10 @@
       '<p class="csum">' + esc(x.summary || '') + '</p>' + body + '</div>'
   }
   function renderKb() {
-    var d = kb(), kw = S.kw.trim().toLowerCase()
-    var chaps = d.chapters.filter(function (c) { return !S.group || c.group === S.group })
+    var d = kb()
+    if (!d) { $('chapList').innerHTML = '<div class="mock">资料加载失败，请刷新页面试试</div>'; return }
+    var kw = S.kw.trim().toLowerCase()
+    var chaps = (d.chapters || []).filter(function (c) { return !S.group || c.group === S.group })
     if (!kw && !S.autoOpenDone && chaps.length) { S.openChap[chaps[0].id] = true; S.autoOpenDone = true }
     var html = '', hit = 0
     chaps.forEach(function (c) {
@@ -161,17 +205,18 @@
       html += '</div>'
     })
     $('chapList').innerHTML = html || '<div class="mock">没有匹配的卡片，换个词试试' + (isActive() ? '' : '，或<a data-goto="me">开通全部</a>') + '</div>'
-    var shown = d.chapters.reduce(function (s, c) { return s + c.cards.length }, 0)
+    var shown = (d.chapters || []).reduce(function (s, c) { return s + c.cards.length }, 0)
     $('kbOpen').textContent = shown
-    $('kbLock').textContent = Math.max(0, CONFIG.TOTAL_C - shown)
+    $('kbLock').textContent = Math.max(0, totalC() - shown)
     $('kbGate').hidden = isActive()
+    $('cTotal').textContent = totalQ()
+    $('cCards').textContent = totalC()
     restoreDecks()
   }
 
   /* ---------- 卡片左右滑动 ---------- */
   function trackOf(cid) {
-    var el = $('chapList').querySelector('[data-track="' + cid + '"]')
-    return el
+    return $('chapList').querySelector('[data-track="' + cid + '"]')
   }
   function deckIdx(track) {
     if (!track.clientWidth) return 0
@@ -217,39 +262,44 @@
 
   /* ---------- 渲染：刷题 ---------- */
   function unitItems(u) {
-    var b = bank()
-    var arr = []
+    var b = bank(), arr = []
+    if (!b) return arr
     ;['single', 'fill', 'short', 'essay', 'term'].forEach(function (k) {
       if (b[k]) arr = arr.concat(b[k].filter(function (i) { return i.u === u }))
     })
     return arr
   }
   function objItems(u) {
-    return bank().single.filter(function (i) { return i.u === u })
+    var b = bank()
+    return (b && b.single) ? b.single.filter(function (i) { return i.u === u }) : []
   }
   function wrongIds() { return ls(LS.wrong, []) }
   function renderUnits() {
-    var b = bank(), wr = wrongIds()
+    var b = bank()
+    if (!b) return
+    var wr = wrongIds()
     var allQ = 0
     ;['single', 'fill', 'short', 'essay', 'term'].forEach(function (k) { if (b[k]) allQ += b[k].length })
     var done = ls(LS.stat, {}), todayDone = done.date === today() ? done.done : 0
     $('cDone').textContent = todayDone
-    $('unitHint').textContent = '共 ' + b.units.length + ' 个单元'
+    $('unitHint').textContent = '共 ' + b.units.length + ' 个单元 · ' + allQ + ' 题'
     $('unitList').innerHTML = b.units.map(function (u) {
       var n = objItems(u.id).length || (b.meta.uc && b.meta.uc[u.id]) || 0
-      var lock = !isActive() && CONFIG.FREE_UNITS.indexOf(u.id) < 0
+      var lock = !isActive() && freeUnits().indexOf(u.id) < 0
       var pct = n ? Math.min(100, Math.round(wr.filter(function (id) { return id.indexOf(u.id) >= 0 }).length / n * 100)) : 0
       return '<div class="unit' + (lock ? ' lock' : '') + '" data-unit="' + esc(u.id) + '">' +
         '<span class="uname">' + esc(u.n) + '</span>' +
         '<span class="ucount">' + esc(u.a || '') + ' · ' + n + ' 题</span>' +
         '<div class="ubar"><i style="width:' + pct + '%"></i></div></div>'
     }).join('')
-    var openUnits = b.units.filter(function (u) { return CONFIG.FREE_UNITS.indexOf(u.id) >= 0 })
+    var openUnits = b.units.filter(function (u) { return freeUnits().indexOf(u.id) >= 0 })
     var openCnt = 0
     openUnits.forEach(function (u) { openCnt += unitItems(u.id).length })
     $('quizOpen').textContent = openUnits.length
     $('quizCnt').textContent = openCnt
     $('quizGate').hidden = isActive()
+    $('fanGate').textContent = totalQ()
+    $('cTotal').textContent = totalQ()
     renderWrong()
   }
   function renderWrong() {
@@ -279,7 +329,7 @@
   /* ---------- 举一反三 ---------- */
   function findCard(cid) {
     var d = kb(), hit = null
-    ;(d.chapters || []).forEach(function (c) { (c.cards || []).forEach(function (x) { if (x.id === cid) hit = x }) })
+    ;(d && d.chapters || []).forEach(function (c) { (c.cards || []).forEach(function (x) { if (x.id === cid) hit = x }) })
     return hit
   }
   function decryptVariants() {
@@ -331,9 +381,10 @@
     $('quizView').hidden = false
     renderQ()
   }
+  function isMulti(q) { return String(q.a == null ? '' : q.a).replace(/[^A-Za-z]/g, '').length > 1 }
   function renderQ() {
     var q = S.queue[S.qi]
-    S.picked = null; S.answered = false
+    S.picked = ''; S.answered = false
     $('qProg').textContent = (S.qi + 1) + ' / ' + S.queue.length
     $('qTag').textContent = (S.label || '') + ' · ' + (q.tg && q.tg.length ? q.tg.join(' / ') : q.id)
     $('qStem').textContent = q.s
@@ -346,6 +397,7 @@
         return '<button class="opt" data-opt="' + k + '"><span class="k">' + k + '</span><span>' + esc(q.o[k]) + '</span></button>'
       }).join('')
       submit.hidden = false; submit.disabled = true
+      submit.textContent = isMulti(q) ? '提交（多选）' : '提交'
       next.hidden = true
     } else {
       opts.hidden = true; sub.hidden = false
@@ -369,7 +421,7 @@
       var k = btn.dataset.opt
       btn.disabled = true
       if (right.indexOf(k) >= 0) btn.classList.add('right')
-      if (!ok && k === S.picked) btn.classList.add('wrong')
+      if (!ok && pick.indexOf(k) >= 0) btn.classList.add('wrong')
     })
     var fb = $('qFb'); fb.hidden = false
     fb.className = 'fb ' + (ok ? 'ok' : 'bad')
@@ -402,15 +454,16 @@
 
   /* ---------- 我的 ---------- */
   function renderMe() {
-    var b = bank()
+    var b = bank(), s = subj()
+    $('meSubj').textContent = s ? s.name : '—'
     $('meStatus').textContent = isActive() ? (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通') : '试看中'
     $('meExpire').textContent = S.auth ? S.auth.expire + (daysLeft() > 0 ? '（剩 ' + daysLeft() + ' 天）' : '') : '—'
-    $('meVer').textContent = (b.meta && b.meta.version) || '—'
+    $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
     $('contactLine').textContent = CONFIG.CONTACT + '（发送"本草衡鉴"，说明要哪一档）'
     $('logoutBtn').hidden = !isActive()
     if (CONFIG.BUY_URL) { $('buyLink').hidden = false; $('buyLink').href = CONFIG.BUY_URL }
-    $('cTotal').textContent = b.meta.total || CONFIG.TOTAL_Q
-    $('cCards').textContent = kb().meta && kb().meta.stats ? kb().meta.stats.cards : CONFIG.TOTAL_C
+    $('cTotal').textContent = totalQ()
+    $('cCards').textContent = totalC()
     if (isActive() && daysLeft() <= 7 && daysLeft() >= 0) {
       $('topBanner').hidden = false
       $('topBanner').textContent = '授权将于 ' + S.auth.expire + ' 到期（剩 ' + daysLeft() + ' 天），联系客服换新码可继续使用。'
@@ -425,6 +478,13 @@
     document.querySelectorAll('[data-goto="me"]').forEach(function (a) {
       a.onclick = function (e) { e.preventDefault(); go('me'); window.scrollTo(0, 0) }
     })
+    if ($('subjChips')) {
+      $('subjChips').onclick = function (e) {
+        var c = e.target.closest('[data-subj]'); if (!c) return
+        if (c.dataset.subj === subjId()) return
+        pickSubject(c.dataset.subj)
+      }
+    }
     $('groups').onclick = function (e) {
       var c = e.target.closest('.chip'); if (!c) return
       S.group = c.dataset.g; renderGroups(); renderKb()
@@ -464,14 +524,25 @@
     $('unitList').onclick = function (e) {
       var u = e.target.closest('.unit'); if (!u) return
       var id = u.dataset.unit
-      if (!isActive() && CONFIG.FREE_UNITS.indexOf(id) < 0) { go('me'); toast('该单元需开通后使用'); return }
+      if (!isActive() && freeUnits().indexOf(id) < 0) { go('me'); toast('该单元需开通后使用'); return }
       openQueue(objItems(id), unitName(id))
     }
     $('qOpts').onclick = function (e) {
       var o = e.target.closest('.opt'); if (!o || S.answered) return
-      S.picked = o.dataset.opt
-      Array.prototype.forEach.call($('qOpts').children, function (b) { b.classList.toggle('on', b === o) })
-      $('qSubmit').disabled = false
+      var q = S.queue[S.qi]
+      var k = o.dataset.opt
+      if (isMulti(q)) {
+        var set = String(S.picked || '').split('').filter(function (c) { return c && c !== k })
+        if (String(S.picked || '').indexOf(k) < 0) set.push(k)
+        S.picked = set.sort().join('')
+        Array.prototype.forEach.call($('qOpts').children, function (b) {
+          b.classList.toggle('on', S.picked.indexOf(b.dataset.opt) >= 0)
+        })
+      } else {
+        S.picked = k
+        Array.prototype.forEach.call($('qOpts').children, function (b) { b.classList.toggle('on', b === o) })
+      }
+      $('qSubmit').disabled = !S.picked
     }
     $('qSubmit').onclick = answerObjective
     $('showAns').onclick = function () { $('qAns').hidden = !$('qAns').hidden }
@@ -488,7 +559,7 @@
         toast('开通成功，正在加载全部资料…')
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
-          else toast('已解锁全部 ' + bank().meta.total + ' 题、' + CONFIG.TOTAL_C + ' 张卡')
+          else toast('已解锁全部 ' + totalQ() + ' 题、' + totalC() + ' 张卡')
           refreshAll()
         })
       })
@@ -534,10 +605,13 @@
   function boot() {
     $('ver').textContent = window.__BHJ_EMBED ? '1.0·离线版' : '1.0'
     loadTrial().then(function (d) {
-      S.data = d
-      $('upd').textContent = (d.kb && d.kb.meta && d.kb.meta.updatedAt) ? '资料更新 ' + d.kb.meta.updatedAt : ''
+      S.data = normalize(d)
+      S.subj = ls(LS.subj, S.data.default || '') || ''
+      if (!subj()) S.subj = S.data.default || ''
+      $('upd').textContent = (kb() && kb().meta && kb().meta.updatedAt) ? '资料更新 ' + kb().meta.updatedAt : ''
       S.auth = ls(LS.auth, null)
       bind()
+      renderSubjChips()
       refreshAll()
       if (isActive()) {
         decryptFull().then(function () { refreshAll() })
