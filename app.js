@@ -8,9 +8,9 @@
     BUY_URL: '',
     TOTAL_Q: 1354,
     TOTAL_C: 953,
-    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
+    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20s'
+    BUILD: '2026-11-20t'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
@@ -75,8 +75,9 @@
     var box = $('subjChips'); if (!box) return
     var l = subjectList()
     box.innerHTML = l.map(function (s) {
-      return '<button class="chip subj' + (s.id === subjId() ? ' on' : '') + '" data-subj="' + esc(s.id) + '">' +
-        esc(s.name || s.id) + '</button>'
+      var locked = isActive() && !subjectActive(s.id)
+      return '<button class="chip subj' + (s.id === subjId() ? ' on' : '') + (locked ? ' lock' : '') + '" data-subj="' + esc(s.id) + '">' +
+        esc(s.name || s.id) + (locked ? ' 🔒' : '') + '</button>'
     }).join('')
   }
 
@@ -90,11 +91,35 @@
   }
   function parseCode(raw) {
     var s = String(raw || '').trim().toUpperCase().replace(/\s/g, '')
-    var m = s.match(/^ZY-(\d{8})-(\d{2})-([0-9A-F]{4})$/)
+    var m = s.match(/^ZY-(\d{8})-(\d{2})(?:-([YPJA]{1,2}))?-([0-9A-F]{4})$/)
     if (!m) return null
-    var y = +m[1].slice(0, 4), mo = +m[1].slice(4, 6), d = +m[1].slice(6, 8)
+    var mo = +m[1].slice(4, 6), d = +m[1].slice(6, 8)
     if (mo < 1 || mo > 12 || d < 1 || d > 31) return null
-    return { code: s, body: 'ZY-' + m[1] + '-' + m[2], sig: m[3], expire: m[1] }
+    var sfx = m[3] || ''
+    if (sfx && !/^(Y|P|J|A|YP|YJ|PJ|YPJ)$/.test(sfx)) return null
+    return { code: s, body: 'ZY-' + m[1] + '-' + m[2] + (sfx ? '-' + sfx : ''), sig: m[4], expire: m[1], sfx: sfx }
+  }
+  function planFromSuffix(sfx) {
+    if (!sfx) return 'all'
+    if (sfx === 'A') return 'all'
+    var mp = { Y: 'yaoli', P: 'paozhi', J: 'jianding' }
+    var arr = sfx.split('').map(function (c) { return mp[c] }).filter(Boolean)
+    return arr.length ? arr : 'all'
+  }
+  function planOf(auth) {
+    var all = ['yaoli', 'paozhi', 'jianding']
+    if (!auth) return []
+    if (auth.plan === 'all' || !auth.plan) return all.slice()
+    return Array.isArray(auth.plan) ? auth.plan.slice() : all.slice()
+  }
+  function subjectActive(id) {
+    return isActive() && planOf(S.auth).indexOf(id) >= 0
+  }
+  function planText(plan) {
+    var all = ['yaoli', 'paozhi', 'jianding']
+    var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学' }
+    if (plan === 'all' || (Array.isArray(plan) && all.every(function (x) { return plan.indexOf(x) >= 0 }))) return '全科'
+    return (Array.isArray(plan) ? plan : all).map(function (x) { return nm[x] || x }).join('、')
   }
   function verifyCode(raw) {
     var c = parseCode(raw)
@@ -103,7 +128,7 @@
       if (h.slice(0, 4).toUpperCase() !== c.sig) return { ok: false, msg: '开通码无效，请核对后重试' }
       var exp = c.expire.slice(0, 4) + '-' + c.expire.slice(4, 6) + '-' + c.expire.slice(6, 8)
       if (exp < today()) return { ok: false, msg: '该码已于 ' + exp + ' 到期，请换新码' }
-      return { ok: true, auth: { code: c.code, expire: exp } }
+      return { ok: true, auth: { code: c.code, expire: exp, plan: planFromSuffix(c.sfx) } }
     })
   }
   function today() {
@@ -177,7 +202,7 @@
         s.items.map(function (it) { return '<li>' + esc(it) + '</li>' }).join('') + '</ul></div>'
     }).join('')
     var vn = varCards()[x.id] || 0
-    if (vn || isActive()) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出' + (vn ? ' ' + Math.min(6, vn) + ' 道新题' : '新题') + '</button>'
+    if ((vn || isActive()) && subjectActive(subjId())) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出' + (vn ? ' ' + Math.min(6, vn) + ' 道新题' : '新题') + '</button>'
     if (x.tags && x.tags.length) body += '<div class="tags">' + x.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>' }).join('') + '</div>'
     return '<div class="deck-card" data-card="' + esc(x.id) + '">' +
       '<div class="ctitle"><span class="kind">' + esc(x.kindLabel || '') + '</span><span>' + esc(x.title) + '</span></div>' +
@@ -188,6 +213,7 @@
     if (!d) { $('chapList').innerHTML = '<div class="mock">资料加载失败，请刷新页面试试</div>'; return }
     var kw = S.kw.trim().toLowerCase()
     var chaps = (d.chapters || []).filter(function (c) { return !S.group || c.group === S.group })
+    if (!subjectActive(subjId())) chaps = chaps.slice(0, CONFIG.FREE_CHAPTERS)
     if (!kw && !S.autoOpenDone && chaps.length) { S.openChap[chaps[0].id] = true; S.autoOpenDone = true }
     var html = '', hit = 0
     chaps.forEach(function (c) {
@@ -290,7 +316,7 @@
     $('unitHint').textContent = '共 ' + b.units.length + ' 个单元 · ' + allQ + ' 题' + (isActive() && !S.full ? ' · 题库加载中…' : '')
     $('unitList').innerHTML = b.units.map(function (u) {
       var n = objItems(u.id).length || (b.meta.uc && b.meta.uc[u.id]) || 0
-      var lock = !isActive() && freeUnits().indexOf(u.id) < 0
+      var lock = !subjectActive(subjId()) && freeUnits().indexOf(u.id) < 0
       var pct = n ? Math.min(100, Math.round(wr.filter(function (id) { return id.indexOf(u.id) >= 0 }).length / n * 100)) : 0
       return '<div class="unit' + (lock ? ' lock' : '') + '" data-unit="' + esc(u.id) + '">' +
         '<span class="uname">' + esc(u.n) + '</span>' +
@@ -384,7 +410,7 @@
 
 
   function openVariants(cid) {
-    if (!isActive()) { go('me'); toast('举一反三需开通后使用'); return }
+    if (!subjectActive(subjId())) { go('me'); toast('举一反三需开通本科（可单科开通）'); return }
     if (!S.varReady) {
       toast('正在加载变式题…')
       decryptVariants(cid).then(function (ok) {
@@ -534,9 +560,9 @@
     var b = bank(), s = subj()
     $('meSubj').textContent = s ? s.name : '—'
     $('meStatus').textContent = isActive() ? (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通') : '试看中'
-    $('meExpire').textContent = S.auth ? S.auth.expire + (daysLeft() > 0 ? '（剩 ' + daysLeft() + ' 天）' : '') : '—'
+    $('meExpire').textContent = S.auth ? S.auth.expire + '（' + planText(S.auth.plan) + '，剩 ' + Math.max(0, daysLeft()) + ' 天）' : '—'
     $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
-    $('contactLine').textContent = CONFIG.CONTACT + '（发送"本草衡鉴"，说明要哪一档）'
+    $('contactLine').textContent = CONFIG.CONTACT + '（三档可选：中药药理学单科 / 中药炮制学单科 / 中药鉴定学单科 / 全科；老码仍为全科）'
     $('logoutBtn').hidden = !isActive()
     if (CONFIG.BUY_URL) { $('buyLink').hidden = false; $('buyLink').href = CONFIG.BUY_URL }
     $('cTotal').textContent = totalQ()
@@ -609,7 +635,7 @@
     $('unitList').onclick = function (e) {
       var u = e.target.closest('.unit'); if (!u) return
       var id = u.dataset.unit
-      if (!isActive() && freeUnits().indexOf(id) < 0) { go('me'); toast('该单元需开通后使用'); return }
+      if (!subjectActive(subjId()) && freeUnits().indexOf(id) < 0) { go('me'); toast('这一科还没开通，下方可选单科或全科'); return }
       var items = S.qmode === 'recite' ? unitItems(id) : objItems(id)
       if (!items.length && isActive() && !S.full) {
         toast('资料加载中，马上进入…')
@@ -675,12 +701,23 @@
       var raw = $('codeInput').value
       verifyCode(raw).then(function (r) {
         if (!r.ok) { toast(r.msg); return }
-        S.auth = r.auth; lsSet(LS.auth, r.auth)
-        toast('开通成功，正在加载全部资料…')
+        var oldPlan = isActive() ? planOf(S.auth) : []
+        var newPlan = planOf(r.auth)
+        var merged = 'all'
+        var allIds = ['yaoli', 'paozhi', 'jianding']
+        var both = oldPlan.concat(newPlan)
+        if (!(r.auth.plan === 'all' || (S.auth && S.auth.plan === 'all') || allIds.every(function (x) { return both.indexOf(x) >= 0 }))) {
+          merged = allIds.filter(function (x) { return both.indexOf(x) >= 0 })
+        }
+        var exp = (S.auth && S.auth.expire > r.auth.expire) ? S.auth.expire : r.auth.expire
+        S.auth = { code: r.auth.code, expire: exp, plan: merged }
+        lsSet(LS.auth, S.auth)
+        if (merged !== 'all' && merged.indexOf(subjId()) < 0) pickSubject(merged[0])
+        toast('已开通：' + planText(merged) + '，正在加载资料…')
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
-          else toast('已解锁全部 ' + totalQ() + ' 题、' + totalC() + ' 张卡')
-          refreshAll()
+          else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
+          renderSubjChips(); refreshAll()
         })
       })
     }
