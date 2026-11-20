@@ -352,9 +352,10 @@
     return hit
   }
   function decryptVariants() {
-    if (S.varReady) return Promise.resolve(true)
+    var sid = (subj() && subj().id) || 'yaoli'
+    if (S.varReady && S.varSubj === sid) return Promise.resolve(true)
     var p = (window.__BHJ_EMBED && window.__BHJ_EMBED.variants) ? Promise.resolve(window.__BHJ_EMBED.variants)
-      : fetch('variants.enc?v=' + CONFIG.BUILD).then(function (r) { return r.text() })
+      : fetch('variants_' + sid + '.enc?v=' + CONFIG.BUILD).then(function (r) { return r.text() })
     return p.then(function (txt) {
       var parts = txt.trim().split('.'), iv = b64(parts[0]), ct = b64(parts[1])
       return sha256hex(CONFIG.SECRET).then(function (hex) {
@@ -364,6 +365,7 @@
       }).then(function (buf) {
         var obj = JSON.parse(new TextDecoder().decode(buf))
         S.full.varData = obj.byCard || {}
+        S.varSubj = sid
         S.varReady = true
         return true
       })
