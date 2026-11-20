@@ -10,7 +10,7 @@
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20z2',
+    BUILD: '2026-11-20z3',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -247,6 +247,9 @@
     var ky = false, bk = false
     p.forEach(function (id) { if (id.indexOf('ky703_') === 0) ky = true; else bk = true })
     return ky && !bk
+  }
+  function hasKyData() {
+    return subjectList().some(function (s) { return subjectGroup(s) === 'kaoyan' })
   }
   function planText(plan) {
     var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
@@ -868,14 +871,17 @@
         S.auth = { code: r.auth.code, expire: exp, plan: merged }
         lsSet(LS.auth, S.auth)
         if (merged !== 'all' && merged.indexOf(subjId()) < 0) pickSubject(merged[0])
+        var kyPlan = merged !== 'all' && merged.indexOf('ky703_yx') >= 0
         toast('已开通：' + planText(merged) + '，正在加载资料…')
         renderSubjChips(); refreshAll()
+        if (kyPlan) { openSheet(); sheet.dir = 'kaoyan'; renderSheet() }
+        if (kyPlan && !hasKyData()) {
+          toast('考研 703 三科已开通，资料录入后自动出现在选择面板')
+          return
+        }
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
-          else if (merged !== 'all' && merged.indexOf('ky703_yx') >= 0) {
-            toast('考研 703 三科已开通，资料录入后自动出现在选择面板')
-            openSheet(); sheet.dir = 'kaoyan'; renderSheet()
-          }
+          else if (kyPlan) toast('考研 703 三科已开通，资料录入后自动出现在选择面板')
           else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
           renderSubjChips(); refreshAll()
         })
@@ -933,7 +939,8 @@
       renderSubjChips()
       refreshAll()
       setTimeout(function () { renderSubjChips() }, 400)
-      if (isActive()) {
+      if (kyOnlyPlan() && !hasKyData()) setTimeout(function () { openSheet(); sheet.dir = 'kaoyan'; renderSheet() }, 700)
+      if (isActive() && !(kyOnlyPlan() && !hasKyData())) {
         decryptFull().then(function () { refreshAll() })
       }
     }).catch(function () {
