@@ -118,6 +118,9 @@ Array.prototype.forEach.call(document.querySelectorAll('.pay'), function(el){
   el.onclick = function(){
     document.querySelectorAll('.pay').forEach(function(x){ x.classList.remove('on') })
     el.classList.add('on'); state.pay = el.dataset.pay
+    if (state.orderNo && $('#payBox').classList.contains('on') && QR_LOCAL[state.pay]) {
+      $('#qr').innerHTML = '<img src="'+QR_LOCAL[state.pay]+'" style="width:190px;height:190px;object-fit:contain">'
+    }
   }
 })
 
