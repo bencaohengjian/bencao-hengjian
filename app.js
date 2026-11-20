@@ -5,12 +5,12 @@
   var CONFIG = {
     SECRET: 'BHJ-2026-h5-v1',
     CONTACT: '微信：a-Medical-l',
-    BUY_URL: '',
+    BUY_URL: 'https://bencaohengjian.github.io/bencao-hengjian/buy.html',
     TOTAL_Q: 1354,
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20w'
+    BUILD: '2026-11-20x'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
@@ -562,7 +562,7 @@
     $('meStatus').textContent = isActive() ? (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通') : '试看中'
     $('meExpire').textContent = S.auth ? S.auth.expire + '（' + planText(S.auth.plan) + '，剩 ' + Math.max(0, daysLeft()) + ' 天）' : '—'
     $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
-    $('contactLine').textContent = CONFIG.CONTACT + '（三档可选：中药药理学单科 / 中药炮制学单科 / 中药鉴定学单科 / 全科；老码仍为全科）'
+    $('contactLine').textContent = CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
     $('logoutBtn').hidden = !isActive()
     if (CONFIG.BUY_URL) { $('buyLink').hidden = false; $('buyLink').href = CONFIG.BUY_URL }
     $('cTotal').textContent = totalQ()
