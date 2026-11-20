@@ -10,7 +10,7 @@
     TOTAL_C: 275,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20f'
+    BUILD: '2026-11-20g'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
@@ -399,10 +399,13 @@
     if (mode) S.qmode = mode
     if (S.qmode === 'recite') {
       $('qShuffle').hidden = false
+      if ($('orderBar')) $('orderBar').hidden = false
       if (S.shuffle) S.queue = shuffleArr(S.queue)
     } else {
       $('qShuffle').hidden = true
+      if ($('orderBar')) $('orderBar').hidden = true
     }
+    syncModeUI()
     $('unitView').hidden = true
     $('quizView').hidden = false
     renderQ()
