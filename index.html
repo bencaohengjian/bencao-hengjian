@@ -8,7 +8,7 @@
 <meta property="og:title" content="本草衡鉴 · 中药药理学 / 中药炮制学">
 <meta property="og:description" content="四学科 · 1646 题 · 1118 张知识卡 · 举一反三出新题 · 错题本 · 在线随时用">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='%230d1512'/><text x='32' y='45' font-size='38' fill='%23c8a03c' text-anchor='middle' font-family='serif'>鉴</text></svg>">
-<link rel="stylesheet" href="app.css?v=2026-11-20j">
+<link rel="stylesheet" href="app.css?v=2026-11-20z">
 </head>
 <body>
 <div class="wrap">
@@ -26,7 +26,11 @@
       <div><b id="cCards">1118</b><span>知识卡</span></div>
       <div><b id="cDone">0</b><span>今日已做</span></div>
     </div>
-    <div class="chips subjs" id="subjChips"></div>
+    <button class="subj-switch" id="subjSwitch" type="button" aria-haspopup="dialog">
+      <span class="ss-dir" id="ssDir">本科课程</span>
+      <span class="ss-main"><b id="ssName">中药药理学</b><i id="ssMeta">加载中</i></span>
+      <span class="ss-act">切换 ▾</span>
+    </button>
     <div class="banner" id="topBanner" hidden></div>
   </header>
 
@@ -104,9 +108,9 @@
 
       <div class="card">
         <p class="card-title">输入开通码</p>
-        <input id="codeInput" class="code" placeholder="ZY-20271231-01-XXXX-Y（单科）或 -A（全科，含植物学）" autocomplete="off">
+        <input id="codeInput" class="code" placeholder="ZY-20271231-01-XXXX-Y（单科）/ -A（全科）/ -K703（考研 703）" autocomplete="off">
         <button class="primary wide" id="codeBtn">开通</button>
-        <p class="hint">一个开通码对应一份授权，请勿转发；到期后换新码即可。换设备直接用同一码重开。单科码末尾 -Y 药理、-P 炮制、-J 鉴定、-Z 药用植物学；全科码 -A 或不带后缀。老码自动按全科。</p>
+        <p class="hint">一个开通码对应一份授权，请勿转发；到期后换新码即可。换设备直接用同一码重开。单科码末尾 -Y 药理、-P 炮制、-J 鉴定、-Z 药用植物学；全科码 -A 或不带后缀；考研 703 三科码 -K703。老码自动按全科。</p>
       </div>
 
       <div class="card">
@@ -124,6 +128,15 @@
     <span id="upd"></span>
   </footer>
 </div>
-<script src="app.js?v=2026-11-20x"></script>
+<div class="ss-mask" id="ssMask" hidden>
+  <div class="ss-sheet" role="dialog" aria-modal="true" aria-label="选择学习内容">
+    <div class="ss-grab"></div>
+    <div class="ss-head"><div><p class="ss-kicker">学习内容</p><h3>选择方向</h3></div><button class="ss-x" id="ssClose" type="button" aria-label="关闭">×</button></div>
+    <div class="dir-tabs" id="ssTabs"></div>
+    <div class="ss-body" id="ssBody"></div>
+    <p class="ss-note" id="ssNote"></p>
+  </div>
+</div>
+<script src="app.js?v=2026-11-20z"></script>
 </body>
 </html>

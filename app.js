@@ -10,10 +10,26 @@
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20x'
+    BUILD: '2026-11-20z',
+    DIRECTIONS: [
+      { id: 'benke', name: '本科课程', short: '本科' },
+      { id: 'kaoyan', name: '考研', short: '考研' }
+    ],
+    PROGRAMS: [
+      {
+        id: 'hnucm-703', group: 'kaoyan', school: '湖南中医药大学', major: '中药学', code: '703',
+        name: '湖南中医药大学 · 中药学 · 703', short: '湖南中医药 703',
+        subjects: [
+          { id: 'ky703_yx', name: '中药学', short: '中药' },
+          { id: 'ky703_yl', name: '中药药理学', short: '药理' },
+          { id: 'ky703_fxhx', name: '分析化学', short: '分析' }
+        ]
+      }
+    ]
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
+  var sheet = { dir: '' }
   var S = {
     data: null, full: null, auth: null, tab: 'kb', subj: '',
     group: '', kw: '', openChap: {}, openCard: {}, deckPos: {},
@@ -37,6 +53,11 @@
     var l = (S.full && S.full.subjects) || (S.data && S.data.subjects) || []
     return l
   }
+  function findSubject(id) {
+    var l = subjectList()
+    for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]
+    return null
+  }
   function subj() {
     var l = subjectList()
     if (!l.length) return null
@@ -54,6 +75,45 @@
   function totalQ() { var b = bank(); return (b && b.meta && b.meta.total) || CONFIG.TOTAL_Q }
   function totalC() { var d = kb(); return (d && d.meta && d.meta.stats && d.meta.stats.cards) || CONFIG.TOTAL_C }
 
+  /* ---------- 方向 / 院校 / 科目 ---------- */
+  function subjectGroup(s) {
+    if (!s) return 'benke'
+    if (s.group) return s.group
+    return 'benke'
+  }
+  function subjectProgram(s) { return (s && s.program) || '' }
+  function programById(id) {
+    for (var i = 0; i < CONFIG.PROGRAMS.length; i++) if (CONFIG.PROGRAMS[i].id === id) return CONFIG.PROGRAMS[i]
+    return null
+  }
+  function currentProgram() {
+    var s = subj()
+    if (!s) return null
+    return programById(subjectProgram(s)) || (CONFIG.PROGRAMS[0] || null)
+  }
+  function dirOfSubject(s) { return subjectGroup(s) === 'kaoyan' ? 'kaoyan' : 'benke' }
+  function subjectStats(s) {
+    if (!s || s.pending) return { q: 0, c: 0 }
+    var q = (s.tiku && s.tiku.meta && s.tiku.meta.total) || 0
+    var c = (s.kb && s.kb.meta && s.kb.meta.stats && s.kb.meta.stats.cards) || 0
+    return { q: q, c: c }
+  }
+  function subjectsOfProgram(p) {
+    var declared = (p.subjects || []).slice()
+    var out = declared.map(function (x) {
+      var real = findSubject(x.id)
+      if (real) return Object.assign({}, x, real)
+      return { id: x.id, name: x.name, short: x.short, pending: true }
+    })
+    subjectList().forEach(function (s) {
+      if (subjectProgram(s) !== p.id) return
+      var has = false
+      for (var i = 0; i < out.length; i++) if (out[i].id === s.id) { has = true; break }
+      if (!has) out.push(s)
+    })
+    return out
+  }
+
   function normalize(d) {
     if (!d) return d
     if (!d.subjects && (d.tiku || d.kb)) {
@@ -64,21 +124,87 @@
     return d
   }
   function pickSubject(id) {
-    if (!id) return
+    if (!id || !findSubject(id)) return
     S.subj = id
     S.group = ''; S.kw = ''; S.openChap = {}; S.deckPos = {}; S.autoOpenDone = false
     lsSet(LS.subj, id)
     renderSubjChips(); refreshAll()
     window.scrollTo(0, 0)
   }
+
+  function subjRowHtml(s) {
+    var st = subjectStats(s)
+    var on = s.id === subjId()
+    var pending = !!s.pending
+    var lock = isActive() && !pending && !subjectActive(s.id)
+    var state = pending ? '待录入' : (lock ? '未开通' : (isActive() ? '已开通' : '试看'))
+    var cls = 'ss-row' + (on ? ' on' : '') + (pending ? ' pending' : '') + (lock ? ' lock' : '')
+    var tag = pending ? 'div' : 'button'
+    return '<' + tag + ' class="' + cls + '" data-subj="' + esc(s.id) + '"' + (pending ? ' aria-disabled="true"' : '') + '>' +
+      '<span class="ss-ic">' + esc((s.short || s.name || '?').slice(0, 1)) + '</span>' +
+      '<span class="ss-info"><b>' + esc(s.name || s.id) + '</b><i>' + (st.q ? st.q + ' 题 · ' + st.c + ' 卡' : '0 题 · 0 卡') + '</i></span>' +
+      '<span class="ss-state">' + state + '</span></' + tag + '>'
+  }
+
+  function programHtml(p) {
+    var subs = subjectsOfProgram(p)
+    var live = 0
+    subs.forEach(function (x) { if (!x.pending) live++ })
+    return '<div class="prog-head"><div class="prog-code">' + esc(p.code) + '</div>' +
+      '<div class="prog-txt"><b>' + esc(p.school) + ' · ' + esc(p.major) + '</b><i>科目代码 ' + esc(p.code) + ' · ' + subs.length + ' 科</i></div>' +
+      '<span class="prog-tag">' + (live ? live + '/' + subs.length + ' 已上线' : '资料待录入') + '</span></div>' +
+      '<div class="ss-list">' + subs.map(subjRowHtml).join('') + '</div>'
+  }
+
   function renderSubjChips() {
-    var box = $('subjChips'); if (!box) return
-    var l = subjectList()
-    box.innerHTML = l.map(function (s) {
-      var locked = isActive() && !subjectActive(s.id)
-      return '<button class="chip subj' + (s.id === subjId() ? ' on' : '') + (locked ? ' lock' : '') + '" data-subj="' + esc(s.id) + '">' +
-        esc(s.name || s.id) + (locked ? ' 🔒' : '') + '</button>'
-    }).join('')
+    var s = subj()
+    if (!s || !$('ssName')) return
+    var p = currentProgram()
+    var prefix = subjectGroup(s) === 'kaoyan' && p ? (p.school + ' ' + p.code + ' · ') : ''
+    var st = subjectStats(s)
+    $('ssDir').textContent = subjectGroup(s) === 'kaoyan' ? '考研' : '本科课程'
+    $('ssName').textContent = prefix + (s.name || s.id)
+    $('ssMeta').textContent = st.q ? st.q + ' 题 · ' + st.c + ' 卡' : '待录入'
+  }
+
+  function renderSheet() {
+    if (!sheet.dir) {
+      var s0 = subj()
+      sheet.dir = dirOfSubject(s0)
+    }
+    if ($('ssTabs')) {
+      $('ssTabs').innerHTML = CONFIG.DIRECTIONS.map(function (d) {
+        return '<button class="dir-tab' + (sheet.dir === d.id ? ' on' : '') + '" data-dir="' + d.id + '">' + esc(d.name) + '</button>'
+      }).join('')
+    }
+    var body = ''
+    var note = ''
+    if (sheet.dir === 'benke') {
+      var list = subjectList().filter(function (s) { return subjectGroup(s) !== 'kaoyan' })
+      body = '<div class="ss-list">' + list.map(subjRowHtml).join('') + '</div>'
+      note = '本科四科共用一套授权：单科码开对应一科，全科码四科全开。'
+    } else {
+      body = CONFIG.PROGRAMS.map(programHtml).join('')
+      note = '考研内容按“院校 + 专业 + 科目代码”独立归档，与本科授权分开；资料录入后自动出现在这里。'
+    }
+    $('ssBody').innerHTML = body
+    $('ssNote').textContent = note
+  }
+
+  function openSheet() {
+    var s = subj()
+    sheet.dir = dirOfSubject(s)
+    renderSheet()
+    clearTimeout(sheet.timer)
+    $('ssMask').hidden = false
+    setTimeout(function () { $('ssMask').classList.add('open') }, 20)
+    document.body.style.overflow = 'hidden'
+  }
+  function closeSheet() {
+    clearTimeout(sheet.timer)
+    $('ssMask').classList.remove('open')
+    sheet.timer = setTimeout(function () { $('ssMask').hidden = true }, 180)
+    document.body.style.overflow = ''
   }
 
   /* ---------- 授权 ---------- */
@@ -91,20 +217,20 @@
   }
   function parseCode(raw) {
     var s = String(raw || '').trim().toUpperCase().replace(/\s/g, '')
-    var m = s.match(/^ZY-(\d{8})-(\d{2})(?:-([YPJAZ]{1,2}))?-([0-9A-F]{4})$/)
+    var m = s.match(/^ZY-(\d{8})-(\d{2})(?:-([A-Z0-9]{1,6}))?-([0-9A-F]{4})$/)
     if (!m) return null
     var mo = +m[1].slice(4, 6), d = +m[1].slice(6, 8)
     if (mo < 1 || mo > 12 || d < 1 || d > 31) return null
     var sfx = m[3] || ''
-    if (sfx && !/^(Y|P|J|A|Z|YP|YJ|PJ|YPJ|YZ|PZ|JZ|YPZ|YJZ|PJZ|YPJZ)$/.test(sfx)) return null
     return { code: s, body: 'ZY-' + m[1] + '-' + m[2] + (sfx ? '-' + sfx : ''), sig: m[4], expire: m[1], sfx: sfx }
   }
   function planFromSuffix(sfx) {
     if (!sfx) return 'all'
     if (sfx === 'A') return 'all'
+    if (sfx === 'K703') return ['ky703_yx', 'ky703_yl', 'ky703_fxhx']
     var mp = { Y: 'yaoli', P: 'paozhi', J: 'jianding', Z: 'zhiwu' }
     var arr = sfx.split('').map(function (c) { return mp[c] }).filter(Boolean)
-    return arr.length ? arr : 'all'
+    return arr
   }
   function planOf(auth) {
     var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
@@ -115,10 +241,19 @@
   function subjectActive(id) {
     return isActive() && planOf(S.auth).indexOf(id) >= 0
   }
+  function kyOnlyPlan() {
+    var p = planOf(S.auth)
+    if (!p.length) return false
+    var ky = false, bk = false
+    p.forEach(function (id) { if (id.indexOf('ky703_') === 0) ky = true; else bk = true })
+    return ky && !bk
+  }
   function planText(plan) {
     var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
-    var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学', zhiwu: '药用植物学' }
+    var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学', zhiwu: '药用植物学',
+      ky703_yx: '中药学', ky703_yl: '中药药理学', ky703_fxhx: '分析化学' }
     if (plan === 'all' || (Array.isArray(plan) && all.every(function (x) { return plan.indexOf(x) >= 0 }))) return '全科'
+    if (Array.isArray(plan) && plan.length === 3 && plan.indexOf('ky703_yx') >= 0 && plan.indexOf('ky703_yl') >= 0 && plan.indexOf('ky703_fxhx') >= 0) return '考研 703 三科'
     return (Array.isArray(plan) ? plan : all).map(function (x) { return nm[x] || x }).join('、')
   }
   function verifyCode(raw) {
@@ -558,13 +693,19 @@
   /* ---------- 我的 ---------- */
   function renderMe() {
     var b = bank(), s = subj()
-    $('meSubj').textContent = s ? s.name : '—'
-    $('meStatus').textContent = isActive() ? (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通') : '试看中'
+    var mp = currentProgram()
+    var on = s ? subjectActive(s.id) : false
+    var ky = kyOnlyPlan()
+    $('meSubj').textContent = s ? ((subjectGroup(s) === 'kaoyan' && mp ? mp.school + ' ' + mp.code + ' · ' : '') + s.name) : '—'
+    $('meStatus').textContent = on ? (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通') : (S.auth ? '当前科目未开通' : '试看中')
     $('meExpire').textContent = S.auth ? S.auth.expire + '（' + planText(S.auth.plan) + '，剩 ' + Math.max(0, daysLeft()) + ' 天）' : '—'
     $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
-    $('contactLine').textContent = CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
+    $('contactLine').textContent = (ky || subjectGroup(s) === 'kaoyan')
+      ? CONFIG.CONTACT + '（考研 703 三科已开通，资料录入后自动出现在选择面板）'
+      : CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
     $('logoutBtn').hidden = !isActive()
-    if (CONFIG.BUY_URL) { $('buyLink').hidden = false; $('buyLink').href = CONFIG.BUY_URL }
+    if (CONFIG.BUY_URL && !ky && subjectGroup(s) !== 'kaoyan') { $('buyLink').hidden = false; $('buyLink').href = CONFIG.BUY_URL }
+    else { $('buyLink').hidden = true }
     $('cTotal').textContent = totalQ()
     $('cCards').textContent = totalC()
     if (isActive() && daysLeft() <= 7 && daysLeft() >= 0) {
@@ -581,11 +722,22 @@
     document.querySelectorAll('[data-goto="me"]').forEach(function (a) {
       a.onclick = function (e) { e.preventDefault(); go('me'); window.scrollTo(0, 0) }
     })
-    if ($('subjChips')) {
-      $('subjChips').onclick = function (e) {
-        var c = e.target.closest('[data-subj]'); if (!c) return
-        if (c.dataset.subj === subjId()) return
-        pickSubject(c.dataset.subj)
+    if ($('subjSwitch')) $('subjSwitch').onclick = openSheet
+    if ($('ssClose')) $('ssClose').onclick = closeSheet
+    if ($('ssMask')) {
+      $('ssMask').onclick = function (e) { if (e.target === $('ssMask')) closeSheet() }
+    }
+    if ($('ssTabs')) {
+      $('ssTabs').onclick = function (e) {
+        var b = e.target.closest('[data-dir]'); if (!b) return
+        sheet.dir = b.dataset.dir; renderSheet()
+      }
+    }
+    if ($('ssBody')) {
+      $('ssBody').onclick = function (e) {
+        var r = e.target.closest('[data-subj]'); if (!r) return
+        if (r.classList.contains('pending')) { $('ssNote').textContent = '这一科资料还在整理，录入后自动开放。'; return }
+        pickSubject(r.dataset.subj); closeSheet()
       }
     }
     $('groups').onclick = function (e) {
@@ -614,6 +766,7 @@
     }, { passive: false })
     window.addEventListener('resize', function () { fitAll() })
     document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && $('ssMask') && !$('ssMask').hidden) { closeSheet(); return }
       if (S.tab !== 'kb' || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
       if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return
       var vis = [].filter.call($('chapList').querySelectorAll('.deck-track'), function (t) {
@@ -705,9 +858,11 @@
         var newPlan = planOf(r.auth)
         var merged = 'all'
         var allIds = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
-        var both = oldPlan.concat(newPlan)
-        if (!(r.auth.plan === 'all' || (S.auth && S.auth.plan === 'all') || allIds.every(function (x) { return both.indexOf(x) >= 0 }))) {
-          merged = allIds.filter(function (x) { return both.indexOf(x) >= 0 })
+        if (!(r.auth.plan === 'all' || (S.auth && S.auth.plan === 'all'))) {
+          var both = oldPlan.concat(newPlan)
+          var uniq = []
+          both.forEach(function (x) { if (uniq.indexOf(x) < 0) uniq.push(x) })
+          merged = allIds.every(function (x) { return uniq.indexOf(x) >= 0 }) ? 'all' : uniq
         }
         var exp = (S.auth && S.auth.expire > r.auth.expire) ? S.auth.expire : r.auth.expire
         S.auth = { code: r.auth.code, expire: exp, plan: merged }
@@ -717,6 +872,10 @@
         renderSubjChips(); refreshAll()
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
+          else if (merged !== 'all' && merged.indexOf('ky703_yx') >= 0) {
+            toast('考研 703 三科已开通，资料录入后自动出现在选择面板')
+            openSheet(); sheet.dir = 'kaoyan'; renderSheet()
+          }
           else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
           renderSubjChips(); refreshAll()
         })
@@ -751,7 +910,7 @@
     if (tab === 'kb') renderKb()
   }
   function refreshAll() {
-    renderGroups(); renderKb(); renderUnits(); renderMe()
+    renderSubjChips(); renderGroups(); renderKb(); renderUnits(); renderMe()
   }
 
   /* ---------- 启动 ---------- */
