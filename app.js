@@ -10,7 +10,7 @@
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20q'
+    BUILD: '2026-11-20r'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
@@ -351,32 +351,43 @@
     ;(d && d.chapters || []).forEach(function (c) { (c.cards || []).forEach(function (x) { if (x.id === cid) hit = x }) })
     return hit
   }
-  function decryptVariants() {
-    var sid = (subj() && subj().id) || 'yaoli'
-    if (S.varReady && S.varSubj === sid) return Promise.resolve(true)
-    var p = (window.__BHJ_EMBED && window.__BHJ_EMBED.variants) ? Promise.resolve(window.__BHJ_EMBED.variants)
-      : fetch('variants_' + sid + '.enc?v=' + CONFIG.BUILD).then(function (r) { return r.text() })
-    return p.then(function (txt) {
+  function decryptOne(sid) {
+    return fetch('variants_' + sid + '.enc?v=' + CONFIG.BUILD).then(function (r) { return r.text() }).then(function (txt) {
       var parts = txt.trim().split('.'), iv = b64(parts[0]), ct = b64(parts[1])
       return sha256hex(CONFIG.SECRET).then(function (hex) {
         return crypto.subtle.importKey('raw', hex2buf(hex), { name: 'AES-GCM' }, false, ['decrypt']).then(function (key) {
           return crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv, tagLength: 128 }, key, ct)
         })
-      }).then(function (buf) {
-        var obj = JSON.parse(new TextDecoder().decode(buf))
-        S.full.varData = obj.byCard || {}
-        S.varSubj = sid
-        S.varReady = true
-        return true
-      })
-    }).catch(function () { return false })
+      }).then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)) })
+    })
   }
+  function decryptVariants(cid) {
+    var sid = (subj() && subj().id) || 'yaoli'
+    if (S.varReady && S.varSubj === sid && (!cid || (S.full.varData || {})[cid])) return Promise.resolve(true)
+    if (window.__BHJ_EMBED && window.__BHJ_EMBED.variants) {
+      S.full.varData = window.__BHJ_EMBED.variants.byCard || {}
+      S.varSubj = sid; S.varReady = true
+      return Promise.resolve(true)
+    }
+    var order = [sid, 'yaoli', 'paozhi', 'jianding'].filter(function (x, i, a) { return a.indexOf(x) === i })
+    function step(i) {
+      if (i >= order.length) return false
+      return decryptOne(order[i]).then(function (obj) {
+        var bc = obj.byCard || {}
+        if (cid && !bc[cid] && i < order.length - 1) return step(i + 1)
+        S.full.varData = bc; S.varSubj = order[i]; S.varReady = true
+        return true
+      }).catch(function () { return step(i + 1) })
+    }
+    return Promise.resolve(step(0))
+  }
+
 
   function openVariants(cid) {
     if (!isActive()) { go('me'); toast('举一反三需开通后使用'); return }
     if (!S.varReady) {
       toast('正在加载变式题…')
-      decryptVariants().then(function (ok) {
+      decryptVariants(cid).then(function (ok) {
         if (!ok) { toast('变式题加载失败，请稍后重试'); return }
         openVariants(cid)
       })
