@@ -10,7 +10,7 @@
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20z',
+    BUILD: '2026-11-20z2',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -932,6 +932,7 @@
       bind()
       renderSubjChips()
       refreshAll()
+      setTimeout(function () { renderSubjChips() }, 400)
       if (isActive()) {
         decryptFull().then(function () { refreshAll() })
       }
