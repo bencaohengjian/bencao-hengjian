@@ -8,9 +8,9 @@
     BUY_URL: '',
     TOTAL_Q: 1354,
     TOTAL_C: 953,
-    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'] },
+    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20u'
+    BUILD: '2026-11-20v'
   }
 
   var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
@@ -91,23 +91,23 @@
   }
   function parseCode(raw) {
     var s = String(raw || '').trim().toUpperCase().replace(/\s/g, '')
-    var m = s.match(/^ZY-(\d{8})-(\d{2})(?:-([YPJA]{1,2}))?-([0-9A-F]{4})$/)
+    var m = s.match(/^ZY-(\d{8})-(\d{2})(?:-([YPJAZ]{1,2}))?-([0-9A-F]{4})$/)
     if (!m) return null
     var mo = +m[1].slice(4, 6), d = +m[1].slice(6, 8)
     if (mo < 1 || mo > 12 || d < 1 || d > 31) return null
     var sfx = m[3] || ''
-    if (sfx && !/^(Y|P|J|A|YP|YJ|PJ|YPJ)$/.test(sfx)) return null
+    if (sfx && !/^(Y|P|J|A|Z|YP|YJ|PJ|YPJ|YZ|PZ|JZ|YPZ|YJZ|PJZ|YPJZ)$/.test(sfx)) return null
     return { code: s, body: 'ZY-' + m[1] + '-' + m[2] + (sfx ? '-' + sfx : ''), sig: m[4], expire: m[1], sfx: sfx }
   }
   function planFromSuffix(sfx) {
     if (!sfx) return 'all'
     if (sfx === 'A') return 'all'
-    var mp = { Y: 'yaoli', P: 'paozhi', J: 'jianding' }
+    var mp = { Y: 'yaoli', P: 'paozhi', J: 'jianding', Z: 'zhiwu' }
     var arr = sfx.split('').map(function (c) { return mp[c] }).filter(Boolean)
     return arr.length ? arr : 'all'
   }
   function planOf(auth) {
-    var all = ['yaoli', 'paozhi', 'jianding']
+    var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
     if (!auth) return []
     if (auth.plan === 'all' || !auth.plan) return all.slice()
     return Array.isArray(auth.plan) ? auth.plan.slice() : all.slice()
@@ -116,8 +116,8 @@
     return isActive() && planOf(S.auth).indexOf(id) >= 0
   }
   function planText(plan) {
-    var all = ['yaoli', 'paozhi', 'jianding']
-    var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学' }
+    var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
+    var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学', zhiwu: '药用植物学' }
     if (plan === 'all' || (Array.isArray(plan) && all.every(function (x) { return plan.indexOf(x) >= 0 }))) return '全科'
     return (Array.isArray(plan) ? plan : all).map(function (x) { return nm[x] || x }).join('、')
   }
@@ -395,7 +395,7 @@
       S.varSubj = sid; S.varReady = true
       return Promise.resolve(true)
     }
-    var order = [sid, 'yaoli', 'paozhi', 'jianding'].filter(function (x, i, a) { return a.indexOf(x) === i })
+    var order = [sid, 'yaoli', 'paozhi', 'jianding', 'zhiwu'].filter(function (x, i, a) { return a.indexOf(x) === i })
     function step(i) {
       if (i >= order.length) return false
       return decryptOne(order[i]).then(function (obj) {
@@ -704,7 +704,7 @@
         var oldPlan = isActive() ? planOf(S.auth) : []
         var newPlan = planOf(r.auth)
         var merged = 'all'
-        var allIds = ['yaoli', 'paozhi', 'jianding']
+        var allIds = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
         var both = oldPlan.concat(newPlan)
         if (!(r.auth.plan === 'all' || (S.auth && S.auth.plan === 'all') || allIds.every(function (x) { return both.indexOf(x) >= 0 }))) {
           merged = allIds.filter(function (x) { return both.indexOf(x) >= 0 })
