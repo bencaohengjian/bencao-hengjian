@@ -6,7 +6,7 @@
 试看每科前 2 个单元与前 2 章知识卡；付款后给开通码，输入即解锁两科全部 835 题、338 张知识卡，并可按知识点一键生成 6 道同考点新题（举一反三，目前仅药理学科有变式题）。
 
 **正式链接**：https://bencaohengjian.github.io/bencao-hengjian/
-仓库：https://github.com/123Liuyulin/bencao-hengjian （Public，main 分支根目录直接发布）
+仓库：https://github.com/bencaohengjian/bencao-hengjian （Public，main 分支根目录直接发布）
 
 ## 一、线上结构
 
