@@ -10,7 +10,7 @@
     TOTAL_C: 953,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20z3',
+    BUILD: '2026-11-20z4',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -241,11 +241,14 @@
   function subjectActive(id) {
     return isActive() && planOf(S.auth).indexOf(id) >= 0
   }
+  function planIsKy(p) {
+    return Array.isArray(p) && p.some(function (id) { return /^ky/.test(id) })
+  }
   function kyOnlyPlan() {
     var p = planOf(S.auth)
     if (!p.length) return false
     var ky = false, bk = false
-    p.forEach(function (id) { if (id.indexOf('ky703_') === 0) ky = true; else bk = true })
+    p.forEach(function (id) { if (/^ky/.test(id)) ky = true; else bk = true })
     return ky && !bk
   }
   function hasKyData() {
@@ -703,9 +706,10 @@
     $('meStatus').textContent = on ? (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通') : (S.auth ? '当前科目未开通' : '试看中')
     $('meExpire').textContent = S.auth ? S.auth.expire + '（' + planText(S.auth.plan) + '，剩 ' + Math.max(0, daysLeft()) + ' 天）' : '—'
     $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
-    $('contactLine').textContent = (ky || subjectGroup(s) === 'kaoyan')
-      ? CONFIG.CONTACT + '（考研 703 三科已开通，资料录入后自动出现在选择面板）'
-      : CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
+    var isKySubj = subjectGroup(s) === 'kaoyan'
+    if (ky || (isKySubj && on)) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 三科已开通，资料录入后自动出现在选择面板）'
+    else if (isKySubj) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 三科打包，开通码联系客服获取）'
+    else $('contactLine').textContent = CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
     $('logoutBtn').hidden = !isActive()
     if (CONFIG.BUY_URL && !ky && subjectGroup(s) !== 'kaoyan') { $('buyLink').hidden = false; $('buyLink').href = CONFIG.BUY_URL }
     else { $('buyLink').hidden = true }
@@ -871,17 +875,17 @@
         S.auth = { code: r.auth.code, expire: exp, plan: merged }
         lsSet(LS.auth, S.auth)
         if (merged !== 'all' && merged.indexOf(subjId()) < 0) pickSubject(merged[0])
-        var kyPlan = merged !== 'all' && merged.indexOf('ky703_yx') >= 0
+        var kyPlan = merged !== 'all' && planIsKy(merged)
         toast('已开通：' + planText(merged) + '，正在加载资料…')
         renderSubjChips(); refreshAll()
         if (kyPlan) { openSheet(); sheet.dir = 'kaoyan'; renderSheet() }
         if (kyPlan && !hasKyData()) {
-          toast('考研 703 三科已开通，资料录入后自动出现在选择面板')
+          toast(planText(merged) + '已开通，资料录入后自动出现在选择面板')
           return
         }
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
-          else if (kyPlan) toast('考研 703 三科已开通，资料录入后自动出现在选择面板')
+          else if (kyPlan) toast(planText(merged) + '已开通，资料录入后自动出现在选择面板')
           else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
           renderSubjChips(); refreshAll()
         })
