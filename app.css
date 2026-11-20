@@ -158,3 +158,13 @@ h2{font-size:16px;margin:0;color:var(--ink);letter-spacing:1px}
 .subjs{margin:-2px 0 12px;gap:10px}
 .subjs .subj{padding:7px 18px;font-size:14px;font-weight:600;border-radius:22px;letter-spacing:.02em}
 .subjs .subj.on{background:linear-gradient(180deg,#1c3a2f,#14291f);color:#f0e2c2;border-color:#14291f;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+
+/* 做题/背题 模式切换 */
+.modebar{display:flex;gap:0;background:#efe7d6;border:1px solid var(--line);border-radius:9px;padding:3px;margin:2px 0 8px}
+.modebar .mode{flex:1;border:0;background:transparent;padding:9px 0;border-radius:7px;font-family:inherit;
+  font-size:14px;letter-spacing:1px;color:#6b675b;cursor:pointer;transition:all .18s}
+.modebar .mode.on{background:#fdf8ec;color:#7d5f18;font-weight:700;box-shadow:0 1px 4px rgba(120,90,20,.12)}
+.modehint{margin:0 0 12px;font-size:12px;line-height:1.7;color:var(--muted)}
+.qacts .primary{order:0}
+.qacts .ghost.next-main{background:var(--ink);color:#f2e8cf;border-color:var(--ink);font-size:15px;
+  letter-spacing:2px;padding:12px}

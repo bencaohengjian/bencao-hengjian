@@ -10,14 +10,15 @@
     TOTAL_C: 275,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20b'
+    BUILD: '2026-11-20c'
   }
 
-  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj' }
+  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode' }
   var S = {
     data: null, full: null, auth: null, tab: 'kb', subj: '',
     group: '', kw: '', openChap: {}, openCard: {}, deckPos: {},
-    unit: null, queue: [], qi: 0, picked: null, answered: false
+    unit: null, queue: [], qi: 0, picked: null, answered: false,
+    qmode: 'quiz', ansHidden: false
   }
 
   function $(id) { return document.getElementById(id) }
@@ -300,7 +301,17 @@
     $('quizGate').hidden = isActive()
     $('fanGate').textContent = totalQ()
     $('cTotal').textContent = totalQ()
+    syncModeUI()
     renderWrong()
+  }
+  function syncModeUI() {
+    if (!$('modeBar')) return
+    ;[].forEach.call($('modeBar').children, function (b) {
+      b.classList.toggle('on', (b.dataset.mode || 'quiz') === S.qmode)
+    })
+    $('modeHint').textContent = S.qmode === 'recite'
+      ? '背题模式：进入单元后答案直接显示，勾对正确选项并给出解析，只看不判对错、不记错题。'
+      : '做题模式：选单元直接作答，提交后判对错，错题自动进错题本。'
   }
   function renderWrong() {
     var wr = wrongIds()
@@ -323,7 +334,7 @@
       return '<div style="padding:7px 0;border-bottom:1px dotted #e6ddca"><span class="tag">' + esc(i.id) + '</span> ' + esc(i.s.slice(0, 46)) + (i.s.length > 46 ? '…' : '') + '</div>'
     }).join('') + '<div style="margin-top:10px"><button class="ghost" id="redoWrong">重做这 ' + list.length + ' 题</button></div>'
     var redo = $('redoWrong')
-    if (redo) redo.onclick = function () { openQueue(list, '错题重做') }
+    if (redo) redo.onclick = function () { openQueue(list, '错题重做', 'quiz') }
   }
 
   /* ---------- 举一反三 ---------- */
@@ -369,14 +380,15 @@
     if (pick.length < 6) pick = pick.concat(v.filter(function (q) { return pick.indexOf(q) < 0 }).slice(0, 6 - pick.length))
     var c = findCard(cid)
     go('quiz')
-    openQueue(pick, '举一反三 · ' + (c ? c.title : cid))
+    openQueue(pick, '举一反三 · ' + (c ? c.title : cid), 'quiz')
     window.scrollTo(0, 0)
   }
 
   /* ---------- 做题 ---------- */
-  function openQueue(items, label) {
+  function openQueue(items, label, mode) {
     if (!items.length) { toast('这个范围暂时没有题目'); return }
     S.queue = items; S.qi = 0; S.label = label
+    if (mode) S.qmode = mode
     $('unitView').hidden = true
     $('quizView').hidden = false
     renderQ()
@@ -384,11 +396,12 @@
   function isMulti(q) { return String(q.a == null ? '' : q.a).replace(/[^A-Za-z]/g, '').length > 1 }
   function renderQ() {
     var q = S.queue[S.qi]
-    S.picked = ''; S.answered = false
+    var recite = S.qmode === 'recite'
+    S.picked = ''; S.answered = false; S.ansHidden = false
     $('qProg').textContent = (S.qi + 1) + ' / ' + S.queue.length
-    $('qTag').textContent = (S.label || '') + ' · ' + (q.tg && q.tg.length ? q.tg.join(' / ') : q.id)
+    $('qTag').textContent = (S.label || '') + ' · ' + (q.tg && q.tg.length ? q.tg.join(' / ') : q.id) + (recite ? ' · 背题' : '')
     $('qStem').textContent = q.s
-    var opts = $('qOpts'), sub = $('qSubjective'), fb = $('qFb'), submit = $('qSubmit'), next = $('qNext')
+    var opts = $('qOpts'), sub = $('qSubjective'), fb = $('qFb'), submit = $('qSubmit'), next = $('qNext'), hide = $('qHide')
     fb.hidden = true; fb.className = 'fb'
     $('qAns').hidden = true
     if (q.o) {
@@ -396,14 +409,41 @@
       opts.innerHTML = Object.keys(q.o).map(function (k) {
         return '<button class="opt" data-opt="' + k + '"><span class="k">' + k + '</span><span>' + esc(q.o[k]) + '</span></button>'
       }).join('')
-      submit.hidden = false; submit.disabled = true
-      submit.textContent = isMulti(q) ? '提交（多选）' : '提交'
-      next.hidden = true
+      if (recite) {
+        var right = String(q.a).toUpperCase().split('').sort().join('')
+        Array.prototype.forEach.call(opts.children, function (btn) {
+          btn.disabled = true
+          if (right.indexOf(btn.dataset.opt) >= 0) btn.classList.add('right')
+        })
+        fb.hidden = false
+        fb.className = 'fb ok'
+        fb.innerHTML = '<b>正确答案：' + esc(String(q.a)) + '</b>' + (q.e ? '<br>解析：' + esc(q.e) : '')
+        submit.hidden = true
+        hide.hidden = false; hide.textContent = '遮住答案'
+        next.hidden = false; next.textContent = S.qi + 1 >= S.queue.length ? '完成' : '下一题'
+        next.classList.add('next-main')
+      } else {
+        submit.hidden = false; submit.disabled = true
+        submit.textContent = isMulti(q) ? '提交（多选）' : '提交'
+        hide.hidden = true
+        next.hidden = true; next.classList.remove('next-main')
+      }
     } else {
       opts.hidden = true; sub.hidden = false
       submit.hidden = true; next.hidden = false
+      hide.hidden = true
       $('qAns').textContent = fmtAns(q.a)
       $('qAns').dataset.ans = fmtAns(q.a)
+      if (recite) {
+        $('qAns').hidden = false
+        $('showAns').hidden = true
+        hide.hidden = false; hide.textContent = '遮住答案'
+        next.classList.add('next-main')
+      } else {
+        $('showAns').hidden = false
+        next.classList.remove('next-main')
+      }
+      next.textContent = S.qi + 1 >= S.queue.length ? '完成' : '下一题'
     }
   }
   function fmtAns(a) {
@@ -521,11 +561,19 @@
       e.preventDefault()
       deckGo(vis[0].dataset.track, e.key === 'ArrowRight' ? 1 : -1)
     })
+    if ($('modeBar')) {
+      $('modeBar').onclick = function (e) {
+        var b = e.target.closest('.mode'); if (!b) return
+        S.qmode = b.dataset.mode === 'recite' ? 'recite' : 'quiz'
+        lsSet(LS.mode, S.qmode)
+        syncModeUI()
+      }
+    }
     $('unitList').onclick = function (e) {
       var u = e.target.closest('.unit'); if (!u) return
       var id = u.dataset.unit
       if (!isActive() && freeUnits().indexOf(id) < 0) { go('me'); toast('该单元需开通后使用'); return }
-      openQueue(objItems(id), unitName(id))
+      openQueue(S.qmode === 'recite' ? unitItems(id) : objItems(id), unitName(id), S.qmode)
     }
     $('qOpts').onclick = function (e) {
       var o = e.target.closest('.opt'); if (!o || S.answered) return
@@ -546,8 +594,19 @@
     }
     $('qSubmit').onclick = answerObjective
     $('showAns').onclick = function () { $('qAns').hidden = !$('qAns').hidden }
+    $('qHide').onclick = function () {
+      var q = S.queue[S.qi]
+      S.ansHidden = !S.ansHidden
+      this.textContent = S.ansHidden ? '显示答案' : '遮住答案'
+      if (q.o) {
+        Array.prototype.forEach.call($('qOpts').children, function (b) { b.classList.toggle('right', !S.ansHidden && String(q.a).toUpperCase().indexOf(b.dataset.opt) >= 0) })
+        $('qFb').hidden = S.ansHidden
+      } else {
+        $('qAns').hidden = S.ansHidden
+      }
+    }
     $('qNext').onclick = function () {
-      if (S.qi + 1 >= S.queue.length) { toast('本组已完成'); backToUnits(); return }
+      if (S.qi + 1 >= S.queue.length) { toast(S.qmode === 'recite' ? '本组背完了' : '本组已完成'); backToUnits(); return }
       S.qi++; renderQ()
     }
     $('qBack').onclick = backToUnits
@@ -610,6 +669,7 @@
       if (!subj()) S.subj = S.data.default || ''
       $('upd').textContent = (kb() && kb().meta && kb().meta.updatedAt) ? '资料更新 ' + kb().meta.updatedAt : ''
       S.auth = ls(LS.auth, null)
+      S.qmode = ls(LS.mode, 'quiz') === 'recite' ? 'recite' : 'quiz'
       bind()
       renderSubjChips()
       refreshAll()

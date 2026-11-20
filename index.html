@@ -8,7 +8,7 @@
 <meta property="og:title" content="本草衡鉴 · 中药药理学 / 中药炮制学">
 <meta property="og:description" content="双学科 · 867 题 · 342 张知识卡 · 举一反三出新题 · 错题本 · 在线随时用">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='%230d1512'/><text x='32' y='45' font-size='38' fill='%23c8a03c' text-anchor='middle' font-family='serif'>鉴</text></svg>">
-<link rel="stylesheet" href="app.css?v=2026-11-20b">
+<link rel="stylesheet" href="app.css?v=2026-11-20c">
 </head>
 <body>
 <div class="wrap">
@@ -54,6 +54,11 @@
       </div>
 
       <div id="unitView">
+        <div class="modebar" id="modeBar">
+          <button class="mode on" data-mode="quiz">做题</button>
+          <button class="mode" data-mode="recite">背题</button>
+        </div>
+        <p class="modehint" id="modeHint">选单元直接作答，提交后判对错，错题自动进错题本。</p>
         <div class="sec-head"><h2>按单元练</h2><span id="unitHint"></span></div>
         <div class="units" id="unitList"></div>
         <div class="sec-head"><h2>错题本</h2><span id="wrongCount">0 题</span></div>
@@ -77,6 +82,7 @@
         </div>
         <div class="qacts">
           <button class="primary" id="qSubmit">提交</button>
+          <button class="ghost" id="qHide" hidden>遮住答案</button>
           <button class="ghost" id="qNext">下一题</button>
         </div>
       </div>
@@ -112,6 +118,6 @@
     <span id="upd"></span>
   </footer>
 </div>
-<script src="app.js?v=2026-11-20b"></script>
+<script src="app.js?v=2026-11-20c"></script>
 </body>
 </html>
