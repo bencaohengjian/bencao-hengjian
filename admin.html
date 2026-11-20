@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本草衡鉴 · 补单后台</title>
+<style>body{background:#0d1512;color:#e8e2d2;font-family:serif;max-width:640px;margin:0 auto;padding:20px}
+input,button{font-size:15px;padding:10px;border-radius:8px;border:1px solid #2a3a32;background:#131f1a;color:#e8e2d2}
+button{background:#c8a03c;color:#17211d;font-weight:600;border:0;margin-left:8px}
+.row{border:1px solid #2a3a32;border-radius:10px;padding:12px;margin:10px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.code{color:#c8a03c;font-family:monospace;word-break:break-all;margin-top:6px}
+</style></head><body>
+<h2>补单后台</h2>
+<p style="color:#9aa79f;font-size:13px">用户用个人收款码付款后，在这里点“确认到账”，系统立即发码；用户购买页会自动收到。</p>
+<input id="token" placeholder="管理口令 ADMIN_TOKEN"><button onclick="load()">查询待处理</button>
+<div id="list"></div>
+<script>
+var BASE='https://bottom-cougar-d0gbb0pyuf50e428f-1536516331.ap-shanghai.app.tcloudbase.com';
+function load(){
+  fetch(BASE+'/api?action=listPending',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'listPending',token:document.getElementById('token').value})})
+  .then(r=>r.json()).then(d=>{
+    var box=document.getElementById('list');
+    if(!d.ok){box.textContent=d.msg;return}
+    if(!d.list.length){box.textContent='暂无待处理订单';return}
+    box.innerHTML=d.list.map(o=>'<div class="row"><div>'+o.title+' · ¥'+o.amount.toFixed(1)+'<div style="color:#9aa79f;font-size:12px">'+o.no+' · 尾号 '+o.no.slice(-6)+'</div><div class="code" id="c'+o.no+'"></div></div><button onclick="ok(\''+o.no+'\',\''+o.no.slice(-6)+'\')">确认到账</button></div>').join('')
+  })
+}
+function ok(no, tail){
+  if(!confirm('确认这笔订单的付款备注尾号是 '+tail+' 吗？确认后立即发码。')) return
+  fetch(BASE+'/api?action=adminConfirm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'adminConfirm',token:document.getElementById('token').value,orderNo:no})})
+  .then(r=>r.json()).then(d=>{
+    if(d.ok){document.getElementById('c'+no).textContent=d.code;alert('已发码：'+d.code)}else alert(d.msg)
+  })
+}
+</script></body></html>
