@@ -10,9 +10,9 @@
     TOTAL_C: 2292,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], jiepou: ['U01', 'U02'], zhx: ['U01', 'U03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-21z8',
-    TRIAL_URL: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/main/trial.json',
-    FULL_URL: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/main/full.enc',
+    BUILD: '2026-11-21z9',
+    TRIAL_URL: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/refs/heads/main/trial.json',
+    FULL_URL: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/refs/heads/main/full.enc',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
