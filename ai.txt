@@ -1,0 +1,3 @@
+# 本站内容禁止用于 AI 训练、索引、摘要或逆向分析
+User-agent: *
+Disallow: /
