@@ -10,7 +10,8 @@
     TOTAL_C: 2292,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], jiepou: ['U01', 'U02'], zhx: ['U01', 'U03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-21z6',
+    BUILD: '2026-11-21z7',
+    FULL_URL: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/main/full.enc',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -318,7 +319,12 @@
   /* ---------- 全量解密 ---------- */
   function readFull() {
     if (window.__BHJ_EMBED && window.__BHJ_EMBED.full) return Promise.resolve(window.__BHJ_EMBED.full)
-    return fetch('full.enc?v=' + CONFIG.BUILD).then(function (r) { return r.text() })
+    return fetch(CONFIG.FULL_URL + '?v=' + CONFIG.BUILD).then(function (r) {
+      if (!r.ok) throw new Error('full ' + r.status)
+      return r.text()
+    }).catch(function () {
+      return fetch('full.enc?v=' + CONFIG.BUILD).then(function (r) { return r.text() })
+    })
   }
 
   function decryptFull() {
