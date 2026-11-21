@@ -6,11 +6,11 @@
     SECRET: 'BHJ-2026-h5-v1',
     CONTACT: '微信：a-Medical-l',
     BUY_URL: 'https://bencaohengjian.github.io/bencao-hengjian/buy.html',
-    TOTAL_Q: 4081,
-    TOTAL_C: 1722,
-    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
+    TOTAL_Q: 6550,
+    TOTAL_C: 2292,
+    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], jiepou: ['U01', 'U02'], zhx: ['U01', 'U03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-21z4',
+    BUILD: '2026-11-21z5',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -183,7 +183,7 @@
     if (sheet.dir === 'benke') {
       var list = subjectList().filter(function (s) { return subjectGroup(s) !== 'kaoyan' })
       body = '<div class="ss-list">' + list.map(subjRowHtml).join('') + '</div>'
-      note = '本科四科共用一套授权：单科码开对应一科，全科码四科全开。'
+      note = '本科六科共用一套授权：单科码开对应一科，全科码六科全开。'
     } else {
       body = CONFIG.PROGRAMS.map(programHtml).join('')
       note = '考研内容按“院校 + 专业 + 科目代码”独立归档，与本科授权分开；资料录入后自动出现在这里。'
@@ -239,12 +239,12 @@
     if (!sfx) return 'all'
     if (sfx === 'A') return 'all'
     if (sfx === 'K703') return ['ky703_yx', 'ky703_yl', 'ky703_fxhx']
-    var mp = { Y: 'yaoli', P: 'paozhi', J: 'jianding', Z: 'zhiwu' }
+    var mp = { Y: 'yaoli', P: 'paozhi', J: 'jianding', Z: 'zhiwu', X: 'jiepou', H: 'zhx' }
     var arr = sfx.split('').map(function (c) { return mp[c] }).filter(Boolean)
     return arr
   }
   function planOf(auth) {
-    var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
+    var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu', 'jiepou', 'zhx']
     if (!auth) return []
     if (auth.plan === 'all' || !auth.plan) return all.slice()
     return Array.isArray(auth.plan) ? auth.plan.slice() : all.slice()
@@ -266,8 +266,8 @@
     return subjectList().some(function (s) { return subjectGroup(s) === 'kaoyan' })
   }
   function planText(plan) {
-    var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
-    var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学', zhiwu: '药用植物学',
+    var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu', 'jiepou', 'zhx']
+    var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学', zhiwu: '药用植物学', jiepou: '人体解剖生理学', zhx: '中药化学',
       ky703_yx: '中药学', ky703_yl: '中药药理学', ky703_fxhx: '分析化学' }
     if (plan === 'all' || (Array.isArray(plan) && all.every(function (x) { return plan.indexOf(x) >= 0 }))) return '全科'
     if (Array.isArray(plan) && plan.length === 3 && plan.indexOf('ky703_yx') >= 0 && plan.indexOf('ky703_yl') >= 0 && plan.indexOf('ky703_fxhx') >= 0) return '考研 703 三科'
@@ -597,7 +597,7 @@
       S.varSubj = sid; S.varReady = true
       return Promise.resolve(true)
     }
-    var order = [sid, 'yaoli', 'paozhi', 'jianding', 'zhiwu'].filter(function (x, i, a) { return a.indexOf(x) === i })
+    var order = [sid, 'yaoli', 'paozhi', 'jianding', 'zhiwu', 'jiepou', 'zhx'].filter(function (x, i, a) { return a.indexOf(x) === i })
     function step(i) {
       if (i >= order.length) return false
       return decryptOne(order[i]).then(function (obj) {
@@ -801,7 +801,7 @@
     var isKySubj = subjectGroup(s) === 'kaoyan'
     if (ky || (isKySubj && on)) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703：中药学、药理已上线；分析化学整理中）'
     else if (isKySubj) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 三科打包，开通码联系客服获取）'
-    else $('contactLine').textContent = CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
+    else $('contactLine').textContent = CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物 / 解剖生理 / 中药化学任选；全科 29.9 元）'
     $('logoutBtn').hidden = !isActive()
     if (CONFIG.BUY_URL && !ky && subjectGroup(s) !== 'kaoyan') { $('buyLink').hidden = false; $('buyLink').href = CONFIG.BUY_URL }
     else { $('buyLink').hidden = true }
@@ -1002,7 +1002,7 @@
         var oldPlan = isActive() ? planOf(S.auth) : []
         var newPlan = planOf(r.auth)
         var merged = 'all'
-        var allIds = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
+        var allIds = ['yaoli', 'paozhi', 'jianding', 'zhiwu', 'jiepou', 'zhx']
         if (isTrial) {
           merged = newPlan
           S.auth = r.auth
