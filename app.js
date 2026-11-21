@@ -6,11 +6,11 @@
     SECRET: 'BHJ-2026-h5-v1',
     CONTACT: '微信：a-Medical-l',
     BUY_URL: 'https://bencaohengjian.github.io/bencao-hengjian/buy.html',
-    TOTAL_Q: 1354,
-    TOTAL_C: 953,
-    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'] },
+    TOTAL_Q: 3696,
+    TOTAL_C: 1626,
+    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-20z4',
+    BUILD: '2026-11-21z2',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -165,6 +165,7 @@
     $('ssDir').textContent = subjectGroup(s) === 'kaoyan' ? '考研' : '本科课程'
     $('ssName').textContent = prefix + (s.name || s.id)
     $('ssMeta').textContent = st.q ? st.q + ' 题 · ' + st.c + ' 卡' : '待录入'
+    if ($('upd')) $('upd').textContent = (kb() && kb().meta && kb().meta.updatedAt) ? '资料更新 ' + kb().meta.updatedAt : ''
   }
 
   function renderSheet() {
@@ -343,7 +344,7 @@
         s.items.map(function (it) { return '<li>' + esc(it) + '</li>' }).join('') + '</ul></div>'
     }).join('')
     var vn = varCards()[x.id] || 0
-    if ((vn || isActive()) && subjectActive(subjId())) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出' + (vn ? ' ' + Math.min(6, vn) + ' 道新题' : '新题') + '</button>'
+    if (vn && isActive() && subjectActive(subjId())) body += '<button class="ghost wide vbtn" data-vcard="' + esc(x.id) + '">举一反三 · 用这个知识点出' + (vn ? ' ' + Math.min(6, vn) + ' 道新题' : '新题') + '</button>'
     if (x.tags && x.tags.length) body += '<div class="tags">' + x.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>' }).join('') + '</div>'
     return '<div class="deck-card" data-card="' + esc(x.id) + '">' +
       '<div class="ctitle"><span class="kind">' + esc(x.kindLabel || '') + '</span><span>' + esc(x.title) + '</span></div>' +
@@ -436,22 +437,24 @@
   function unitItems(u) {
     var b = bank(), arr = []
     if (!b) return arr
-    ;['single', 'fill', 'short', 'essay', 'term'].forEach(function (k) {
+    ;['single', 'judge', 'fill', 'short', 'essay', 'term'].forEach(function (k) {
       if (b[k]) arr = arr.concat(b[k].filter(function (i) { return i.u === u }))
     })
     return arr
   }
   function objItems(u) {
-    var b = bank()
-    return (b && b.single) ? b.single.filter(function (i) { return i.u === u }) : []
+    var b = bank(), arr = []
+    if (!b) return arr
+    ;['single', 'judge'].forEach(function (k) { if (b[k]) arr = arr.concat(b[k].filter(function (i) { return i.u === u })) })
+    return arr
   }
   function wrongIds() { return ls(LS.wrong, []) }
   function renderUnits() {
     var b = bank()
     if (!b) return
     var wr = wrongIds()
-    var allQ = 0
-    ;['single', 'fill', 'short', 'essay', 'term'].forEach(function (k) { if (b[k]) allQ += b[k].length })
+    var allQ = (b.meta && b.meta.total) || 0
+    if (!allQ) { ;['single', 'judge', 'fill', 'short', 'essay', 'term'].forEach(function (k) { if (b[k]) allQ += b[k].length }) }
     var done = ls(LS.stat, {}), todayDone = done.date === today() ? done.done : 0
     $('cDone').textContent = todayDone
     $('unitHint').textContent = '共 ' + b.units.length + ' 个单元 · ' + allQ + ' 题' + (isActive() && !S.full ? ' · 题库加载中…' : '')
@@ -497,7 +500,7 @@
     }
     var b = bank()
     var list = []
-    ;['single', 'fill', 'short', 'essay', 'term'].forEach(function (k) {
+    ;['single', 'judge', 'fill', 'short', 'essay', 'term'].forEach(function (k) {
       (b[k] || []).forEach(function (i) { if (wr.indexOf(i.id) >= 0) list.push(i) })
     })
     if (S.full && S.full.varData) {
@@ -603,7 +606,10 @@
     var recite = S.qmode === 'recite'
     S.picked = ''; S.answered = false; S.ansHidden = false
     $('qProg').textContent = (S.qi + 1) + ' / ' + S.queue.length
-    $('qTag').textContent = (S.label || '') + ' · ' + (q.tg && q.tg.length ? q.tg.join(' / ') : q.id) + (recite ? ' · 背题' : '')
+    var tagBits = []
+    if (S.label) tagBits.push(S.label)
+    ;(q.tg && q.tg.length ? q.tg : [q.id]).forEach(function (x) { if (tagBits.indexOf(x) < 0) tagBits.push(x) })
+    $('qTag').textContent = tagBits.join(' · ') + (recite ? ' · 背题' : '')
     $('qStem').textContent = q.s
     var opts = $('qOpts'), sub = $('qSubjective'), fb = $('qFb'), submit = $('qSubmit'), next = $('qNext'), hide = $('qHide')
     fb.hidden = true; fb.className = 'fb'
@@ -621,7 +627,7 @@
         })
         fb.hidden = false
         fb.className = 'fb ok'
-        fb.innerHTML = '<b>正确答案：' + esc(String(q.a)) + '</b>' + (q.e ? '<br>解析：' + esc(q.e) : '')
+        fb.innerHTML = '<b>正确答案：' + esc(q.t === 'judge' ? (String(q.a) === 'A' ? '正确（A）' : '错误（B）') : String(q.a)) + '</b>' + (q.e ? '<br>解析：' + esc(q.e) : '')
         submit.hidden = true
         hide.hidden = false; hide.textContent = '遮住答案'
         next.hidden = false; next.textContent = S.qi + 1 >= S.queue.length ? '完成' : '下一题'
@@ -669,7 +675,8 @@
     })
     var fb = $('qFb'); fb.hidden = false
     fb.className = 'fb ' + (ok ? 'ok' : 'bad')
-    fb.innerHTML = '<b>' + (ok ? '答对' : '答错') + '</b>　正确答案：' + esc(String(q.a)) +
+    var ansText = q.t === 'judge' ? (String(q.a) === 'A' ? '正确（A）' : '错误（B）') : String(q.a)
+    fb.innerHTML = '<b>' + (ok ? '答对' : '答错') + '</b>　正确答案：' + esc(ansText) +
       (q.e ? '<br>解析：' + esc(q.e) : '')
     if (!ok) markWrong(q.id, true); else markWrong(q.id, false)
     stat(ok)
@@ -707,7 +714,7 @@
     $('meExpire').textContent = S.auth ? S.auth.expire + '（' + planText(S.auth.plan) + '，剩 ' + Math.max(0, daysLeft()) + ' 天）' : '—'
     $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
     var isKySubj = subjectGroup(s) === 'kaoyan'
-    if (ky || (isKySubj && on)) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 三科已开通，资料录入后自动出现在选择面板）'
+    if (ky || (isKySubj && on)) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 已开通：中药学已上线，药理 / 分析化学整理中）'
     else if (isKySubj) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 三科打包，开通码联系客服获取）'
     else $('contactLine').textContent = CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
     $('logoutBtn').hidden = !isActive()
@@ -885,7 +892,7 @@
         }
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
-          else if (kyPlan) toast(planText(merged) + '已开通，资料录入后自动出现在选择面板')
+          else if (kyPlan) toast('考研 703 已开通：中药学 ' + totalQ() + ' 题 / ' + totalC() + ' 卡已解锁；药理、分析化学整理中')
           else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
           renderSubjChips(); refreshAll()
         })
