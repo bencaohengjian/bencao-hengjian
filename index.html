@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>本草衡鉴 · 本科四科 + 湖南中医药大学 703 中药学 刷题与知识卡</title>
-<meta name="description" content="本草衡鉴：本科中药药理学 550 题 / 404 卡、中药炮制学 357 题 / 63 卡、中药鉴定学 447 题 / 486 卡、药用植物学 292 题 / 165 卡；考研湖南中医药大学 703 中药学 2050 题 / 508 卡。按方向与院校切科，手机在线刷题，每科前两个单元与两章知识卡免费试看。">
-<meta property="og:title" content="本草衡鉴 · 本科四科 + 湖南中医药大学 703 中药学">
-<meta property="og:description" content="本科四科 + 考研 703 中药学 · 3696 题 · 1626 张知识卡 · 错题本 · 在线随时用">
+<title>本草衡鉴 · 本科四科 + 湖南中医药大学 703 中药学、中药药理学 刷题与知识卡</title>
+<meta name="description" content="本草衡鉴：本科中药药理学 560 题 / 404 卡、中药炮制学 368 题 / 63 卡、中药鉴定学 459 题 / 486 卡、药用植物学 302 题 / 165 卡；考研湖南中医药大学 703 中药学 2050 题 / 508 卡、中药药理学 342 题 / 96 卡，分析化学整理中。按方向与院校切科，手机在线刷题，每科前两个单元与两章知识卡免费试看。">
+<meta property="og:title" content="本草衡鉴 · 本科四科 + 湖南中医药大学 703 中药学、中药药理学">
+<meta property="og:description" content="本科四科 + 考研 703 中药学、中药药理学 · 4081 题 · 1722 张知识卡 · 错题本 · 在线随时用">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='%230d1512'/><text x='32' y='45' font-size='38' fill='%23c8a03c' text-anchor='middle' font-family='serif'>鉴</text></svg>">
-<link rel="stylesheet" href="app.css?v=2026-11-21z3">
+<link rel="stylesheet" href="app.css?v=2026-11-21z4">
 </head>
 <body>
 <div class="wrap">
@@ -17,13 +17,13 @@
     <div class="hero-top">
       <div>
         <h1>本草衡鉴</h1>
-        <p class="sub">本科四科 · 湖南中医药大学 703 中药学 · 刷题与知识卡</p>
+        <p class="sub">本科四科 · 湖南中医药大学 703 中药学、中药药理学 · 刷题与知识卡</p>
       </div>
       <div class="seal">鉴</div>
     </div>
     <div class="counts">
-      <div><b id="cTotal">3696</b><span>题</span></div>
-      <div><b id="cCards">1626</b><span>知识卡</span></div>
+      <div><b id="cTotal">4081</b><span>题</span></div>
+      <div><b id="cCards">1722</b><span>知识卡</span></div>
       <div><b id="cDone">0</b><span>今日已做</span></div>
     </div>
     <button class="subj-switch" id="subjSwitch" type="button" aria-haspopup="dialog">
@@ -53,7 +53,7 @@
 
     <section id="view-quiz" class="view">
       <div class="gate" id="quizGate" hidden>
-        <span>试看版 · 已开放 <b id="quizOpen">2</b> 个单元 <b id="quizCnt">68</b> 题，开通解锁全部 <b id="fanGate">1354</b> 题</span>
+        <span>试看版 · 已开放 <b id="quizOpen">2</b> 个单元 <b id="quizCnt">68</b> 题，开通解锁全部 <b id="fanGate">4081</b> 题</span>
         <a class="gate-link" data-goto="me">开通 ›</a>
       </div>
 
@@ -61,6 +61,7 @@
         <div class="modebar" id="modeBar">
           <button class="mode on" data-mode="quiz">做题</button>
           <button class="mode" data-mode="recite">背题</button>
+          <button class="mode" data-mode="qa">简答</button>
         </div>
         <p class="modehint" id="modeHint">选单元直接作答，提交后判对错，错题自动进错题本。</p>
         <div class="orderbar" id="orderBar" hidden>
@@ -68,6 +69,7 @@
           <button class="orderbtn on" data-order="seq">顺序</button>
           <button class="orderbtn" data-order="rand">随机</button>
         </div>
+        <button class="ghost wide qa-all" id="qaAllBtn" hidden type="button">全部简答 · 本科目（<span id="qaAllCnt">0</span> 题）</button>
         <div class="sec-head"><h2>按单元练</h2><span id="unitHint"></span></div>
         <div class="units" id="unitList"></div>
         <div class="sec-head"><h2>错题本</h2><span id="wrongCount">0 题</span></div>
@@ -85,8 +87,14 @@
           <h3 id="qStem"></h3>
           <div class="opts" id="qOpts"></div>
           <div class="subjective" id="qSubjective" hidden>
+            <textarea id="qaDraft" rows="4" placeholder="先自己作答，可在此记要点；仅保存在本机，不判分、不进错题本" hidden></textarea>
             <button class="ghost" id="showAns">查看参考答案</button>
             <div class="ans" id="qAns" hidden></div>
+            <div class="qa-eval" id="qaEval" hidden>
+              <span class="qa-eval-lab">自评：</span>
+              <button class="ghost qa-btn" data-eval="know" type="button">会了</button>
+              <button class="ghost qa-btn" data-eval="redo" type="button">再练一遍</button>
+            </div>
           </div>
           <div class="fb" id="qFb" hidden></div>
         </div>
@@ -137,6 +145,6 @@
     <p class="ss-note" id="ssNote"></p>
   </div>
 </div>
-<script src="app.js?v=2026-11-21z3"></script>
+<script src="app.js?v=2026-11-21z4"></script>
 </body>
 </html>

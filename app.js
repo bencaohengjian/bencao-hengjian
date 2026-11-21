@@ -6,11 +6,11 @@
     SECRET: 'BHJ-2026-h5-v1',
     CONTACT: '微信：a-Medical-l',
     BUY_URL: 'https://bencaohengjian.github.io/bencao-hengjian/buy.html',
-    TOTAL_Q: 3696,
-    TOTAL_C: 1626,
-    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
+    TOTAL_Q: 4081,
+    TOTAL_C: 1722,
+    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-21z3',
+    BUILD: '2026-11-21z4',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -28,7 +28,7 @@
     ]
   }
 
-  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle' }
+  var LS = { auth: 'bhj_auth', wrong: 'bhj_wrong', stat: 'bhj_stat', open: 'bhj_open', subj: 'bhj_subj', mode: 'bhj_mode', shuffle: 'bhj_shuffle', qa: 'bhj_qa', qaDraft: 'bhj_qa_draft' }
   var sheet = { dir: '' }
   var S = {
     data: null, full: null, auth: null, tab: 'kb', subj: '',
@@ -477,6 +477,27 @@
     ;['single', 'judge'].forEach(function (k) { if (b[k]) arr = arr.concat(b[k].filter(function (i) { return i.u === u })) })
     return arr
   }
+  function qaItems(u) {
+    var b = bank(), arr = []
+    if (!b) return arr
+    ;['short', 'essay'].forEach(function (k) { if (b[k]) arr = arr.concat(b[k].filter(function (i) { return i.u === u })) })
+    return arr
+  }
+  function qaAllItems() {
+    var b = bank(), arr = []
+    if (!b) return arr
+    ;['short', 'essay'].forEach(function (k) { if (b[k]) arr = arr.concat(b[k] || []) })
+    if (!subjectActive(subjId())) {
+      var free = freeUnits()
+      arr = arr.filter(function (i) { return free.indexOf(i.u) >= 0 })
+    }
+    return arr
+  }
+  function modeItems(u) {
+    if (S.qmode === 'recite') return unitItems(u)
+    if (S.qmode === 'qa') return qaItems(u)
+    return objItems(u)
+  }
   function wrongIds() { return ls(LS.wrong, []) }
   function renderUnits() {
     var b = bank()
@@ -488,7 +509,8 @@
     $('cDone').textContent = todayDone
     $('unitHint').textContent = '共 ' + b.units.length + ' 个单元 · ' + allQ + ' 题' + (isActive() && !S.full ? ' · 题库加载中…' : '')
     $('unitList').innerHTML = b.units.map(function (u) {
-      var n = objItems(u.id).length || (b.meta.uc && b.meta.uc[u.id]) || 0
+      var n = modeItems(u.id).length
+      if (S.qmode !== 'qa' && !n && b.meta.uc) n = b.meta.uc[u.id] || 0
       var lock = !subjectActive(subjId()) && freeUnits().indexOf(u.id) < 0
       var pct = n ? Math.min(100, Math.round(wr.filter(function (id) { return id.indexOf(u.id) >= 0 }).length / n * 100)) : 0
       return '<div class="unit' + (lock ? ' lock' : '') + '" data-unit="' + esc(u.id) + '">' +
@@ -496,6 +518,10 @@
         '<span class="ucount">' + esc(u.a || '') + ' · ' + n + ' 题</span>' +
         '<div class="ubar"><i style="width:' + pct + '%"></i></div></div>'
     }).join('')
+    if ($('qaAllBtn')) {
+      $('qaAllBtn').hidden = S.qmode !== 'qa'
+      $('qaAllCnt').textContent = qaAllItems().length
+    }
     var openUnits = b.units.filter(function (u) { return freeUnits().indexOf(u.id) >= 0 })
     var openCnt = 0
     openUnits.forEach(function (u) { openCnt += unitItems(u.id).length })
@@ -516,9 +542,12 @@
     ;[].forEach.call($('orderBar').querySelectorAll('.orderbtn'), function (b) {
       b.classList.toggle('on', (b.dataset.order === 'rand') === !!S.shuffle)
     })
+    if ($('qaAllBtn')) $('qaAllBtn').hidden = S.qmode !== 'qa'
     $('modeHint').textContent = S.qmode === 'recite'
       ? '背题模式：进入单元后答案直接显示，勾对正确选项并给出解析，只看不判对错、不记错题。'
-      : '做题模式：选单元直接作答，提交后判对错，错题自动进错题本。'
+      : S.qmode === 'qa'
+        ? '简答/论述：先自己作答（要点仅存本机），查看参考答案后自评；自评不进错题本，也不计今日已做。'
+        : '做题模式：选单元直接作答，提交后判对错，错题自动进错题本。'
   }
   function renderWrong() {
     var wr = wrongIds()
@@ -633,11 +662,14 @@
   function renderQ() {
     var q = S.queue[S.qi]
     var recite = S.qmode === 'recite'
+    var qa = S.qmode === 'qa'
     S.picked = ''; S.answered = false; S.ansHidden = false
     $('qProg').textContent = (S.qi + 1) + ' / ' + S.queue.length
     var tagBits = []
     if (S.label) tagBits.push(S.label)
     ;(q.tg && q.tg.length ? q.tg : [q.id]).forEach(function (x) { if (tagBits.indexOf(x) < 0) tagBits.push(x) })
+    var qaSuffix = qa ? (q.t === 'essay' ? '论述' : '简答') : ''
+    if (qaSuffix && tagBits.indexOf(qaSuffix) < 0) tagBits.push(qaSuffix)
     $('qTag').textContent = tagBits.join(' · ') + (recite ? ' · 背题' : '')
     $('qStem').textContent = q.s
     var opts = $('qOpts'), sub = $('qSubjective'), fb = $('qFb'), submit = $('qSubmit'), next = $('qNext'), hide = $('qHide')
@@ -645,6 +677,7 @@
     $('qAns').hidden = true
     if (q.o) {
       sub.hidden = true; opts.hidden = false
+      $('qaDraft').hidden = true; $('qaEval').hidden = true
       opts.innerHTML = Object.keys(q.o).map(function (k) {
         return '<button class="opt" data-opt="' + k + '"><span class="k">' + k + '</span><span>' + esc(q.o[k]) + '</span></button>'
       }).join('')
@@ -673,14 +706,27 @@
       hide.hidden = true
       $('qAns').textContent = fmtAns(q.a)
       $('qAns').dataset.ans = fmtAns(q.a)
-      if (recite) {
-        $('qAns').hidden = false
-        $('showAns').hidden = true
-        hide.hidden = false; hide.textContent = '遮住答案'
-        next.classList.add('next-main')
-      } else {
+      var draft = $('qaDraft'), evalBox = $('qaEval')
+      if (qa) {
+        draft.hidden = false
+        draft.value = draftOf(q.id)
+        evalBox.hidden = true
+        paintEval(evalState(q.id))
         $('showAns').hidden = false
+        $('showAns').textContent = '查看参考答案'
         next.classList.remove('next-main')
+      } else {
+        draft.hidden = true
+        evalBox.hidden = true
+        if (recite) {
+          $('qAns').hidden = false
+          $('showAns').hidden = true
+          hide.hidden = false; hide.textContent = '遮住答案'
+          next.classList.add('next-main')
+        } else {
+          $('showAns').hidden = false
+          next.classList.remove('next-main')
+        }
       }
       next.textContent = S.qi + 1 >= S.queue.length ? '完成' : '下一题'
     }
@@ -688,6 +734,16 @@
   function fmtAns(a) {
     if (Array.isArray(a)) return a.join('；')
     return a || '（暂无参考答案）'
+  }
+  function evalMap() { return ls(LS.qa, {}) }
+  function draftMap() { return ls(LS.qaDraft, {}) }
+  function evalState(qid) { var m = evalMap()[subjId()]; return m ? m[qid] : '' }
+  function draftOf(qid) { var m = draftMap()[subjId()]; return m ? m[qid] || '' : '' }
+  function paintEval(state) {
+    if (!$('qaEval')) return
+    ;[].forEach.call($('qaEval').querySelectorAll('[data-eval]'), function (b) {
+      b.classList.toggle('on', b.dataset.eval === state)
+    })
   }
   function answerObjective() {
     var q = S.queue[S.qi]
@@ -743,7 +799,7 @@
     $('meExpire').textContent = S.auth ? (S.auth.expireAt ? fmtDateTime(S.auth.expireAt) + '（' + planText(S.auth.plan) + '，体验授权，' + authLeftText() + '）' : S.auth.expire + '（' + planText(S.auth.plan) + '，' + authLeftText() + '）') : '—'
     $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
     var isKySubj = subjectGroup(s) === 'kaoyan'
-    if (ky || (isKySubj && on)) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 已开通：中药学已上线，药理 / 分析化学整理中）'
+    if (ky || (isKySubj && on)) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703：中药学、药理已上线；分析化学整理中）'
     else if (isKySubj) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 三科打包，开通码联系客服获取）'
     else $('contactLine').textContent = CONFIG.CONTACT + '（在线开通：单科 9.9 元，药理 / 炮制 / 鉴定 / 植物任选；全科 29.9 元）'
     $('logoutBtn').hidden = !isActive()
@@ -826,21 +882,30 @@
     if ($('modeBar')) {
       $('modeBar').onclick = function (e) {
         var b = e.target.closest('.mode'); if (!b) return
-        S.qmode = b.dataset.mode === 'recite' ? 'recite' : 'quiz'
+        S.qmode = b.dataset.mode
         lsSet(LS.mode, S.qmode)
         syncModeUI()
+        renderUnits()
+      }
+    }
+    if ($('qaAllBtn')) {
+      $('qaAllBtn').onclick = function () {
+        var items = qaAllItems()
+        if (!items.length) { toast('本科目暂无简答/论述题，后续补充中'); return }
+        openQueue(items, '全部简答 · ' + (subj() ? subj().name : ''), 'qa')
+        window.scrollTo(0, 0)
       }
     }
     $('unitList').onclick = function (e) {
       var u = e.target.closest('.unit'); if (!u) return
       var id = u.dataset.unit
       if (!subjectActive(subjId()) && freeUnits().indexOf(id) < 0) { go('me'); toast('这一科还没开通，下方可选单科或全科'); return }
-      var items = S.qmode === 'recite' ? unitItems(id) : objItems(id)
+      var items = modeItems(id)
       if (!items.length && isActive() && !S.full) {
         toast('资料加载中，马上进入…')
         decryptFull().then(function (ok) {
           refreshAll()
-          var again = S.qmode === 'recite' ? unitItems(id) : objItems(id)
+          var again = modeItems(id)
           if (ok && again.length) openQueue(again, unitName(id), S.qmode)
           else toast('资料加载失败，请刷新页面重试')
         })
@@ -879,7 +944,36 @@
       toast('已打乱，从头再背一遍')
     }
     $('qSubmit').onclick = answerObjective
-    $('showAns').onclick = function () { $('qAns').hidden = !$('qAns').hidden }
+    $('showAns').onclick = function () {
+      var ans = $('qAns')
+      ans.hidden = !ans.hidden
+      if (S.qmode === 'qa') {
+        var ev = $('qaEval')
+        if (ev) ev.hidden = ans.hidden
+        this.textContent = ans.hidden ? '查看参考答案' : '收起参考答案'
+      }
+    }
+    if ($('qaEval')) {
+      $('qaEval').onclick = function (e) {
+        var b = e.target.closest('[data-eval]'); if (!b) return
+        var q = S.queue[S.qi]; if (!q) return
+        var m = evalMap(), sid = subjId()
+        m[sid] = m[sid] || {}
+        m[sid][q.id] = b.dataset.eval
+        lsSet(LS.qa, m)
+        paintEval(b.dataset.eval)
+        toast(b.dataset.eval === 'know' ? '已记为「会了」' : '已记为「再练一遍」，稍后可回来重做')
+      }
+    }
+    if ($('qaDraft')) {
+      $('qaDraft').oninput = function () {
+        var q = S.queue[S.qi]; if (!q) return
+        var m = draftMap(), sid = subjId()
+        m[sid] = m[sid] || {}
+        m[sid][q.id] = this.value
+        lsSet(LS.qaDraft, m)
+      }
+    }
     $('qHide').onclick = function () {
       var q = S.queue[S.qi]
       S.ansHidden = !S.ansHidden
@@ -934,7 +1028,7 @@
         }
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
-          else if (kyPlan) toast(isTrial ? '考研 703 中药学 2 小时体验已开启' : '考研 703 已开通：中药学 ' + totalQ() + ' 题 / ' + totalC() + ' 卡已解锁；药理、分析化学整理中')
+          else if (kyPlan) toast(isTrial ? '考研 703 中药学 2 小时体验已开启' : '考研 703 已开通：中药学、药理已上线；分析化学整理中')
           else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
           renderSubjChips(); refreshAll()
         })
@@ -986,7 +1080,8 @@
       if (!subj()) S.subj = S.data.default || ''
       $('upd').textContent = (kb() && kb().meta && kb().meta.updatedAt) ? '资料更新 ' + kb().meta.updatedAt : ''
       S.auth = ls(LS.auth, null)
-      S.qmode = ls(LS.mode, 'quiz') === 'recite' ? 'recite' : 'quiz'
+      var savedMode = ls(LS.mode, 'quiz')
+      S.qmode = (savedMode === 'recite' || savedMode === 'qa') ? savedMode : 'quiz'
       S.shuffle = !!ls(LS.shuffle, false)
       bind()
       renderSubjChips()
