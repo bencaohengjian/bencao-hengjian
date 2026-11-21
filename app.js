@@ -10,7 +10,7 @@
     TOTAL_C: 1626,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z02', 'Z03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-21z2',
+    BUILD: '2026-11-21z3',
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
       { id: 'kaoyan', name: '考研', short: '考研' }
@@ -225,7 +225,17 @@
     var sfx = m[3] || ''
     return { code: s, body: 'ZY-' + m[1] + '-' + m[2] + (sfx ? '-' + sfx : ''), sig: m[4], expire: m[1], sfx: sfx }
   }
+  function isTrialSfx(sfx) {
+    return /^T(?:[01]\d|2[0-3])[0-5]\d$/.test(sfx)
+  }
+  function trialExpireAt(c) {
+    if (!c || !isTrialSfx(c.sfx)) return null
+    var y = +c.expire.slice(0, 4), mo = +c.expire.slice(4, 6) - 1, d = +c.expire.slice(6, 8)
+    var hh = +c.sfx.slice(1, 3), mm = +c.sfx.slice(3, 5)
+    return new Date(y, mo, d, hh, mm, 59, 999)
+  }
   function planFromSuffix(sfx) {
+    if (isTrialSfx(sfx)) return ['ky703_yx']
     if (!sfx) return 'all'
     if (sfx === 'A') return 'all'
     if (sfx === 'K703') return ['ky703_yx', 'ky703_yl', 'ky703_fxhx']
@@ -269,6 +279,11 @@
     return sha256hex(CONFIG.SECRET + c.body + '|h5').then(function (h) {
       if (h.slice(0, 4).toUpperCase() !== c.sig) return { ok: false, msg: '开通码无效，请核对后重试' }
       var exp = c.expire.slice(0, 4) + '-' + c.expire.slice(4, 6) + '-' + c.expire.slice(6, 8)
+      var tea = trialExpireAt(c)
+      if (tea) {
+        if (tea.getTime() < Date.now()) return { ok: false, msg: '该体验码已到期，请用长久开通码继续' }
+        return { ok: true, auth: { code: c.code, expire: exp, expireAt: tea.toISOString(), plan: ['ky703_yx'], trial: true } }
+      }
       if (exp < today()) return { ok: false, msg: '该码已于 ' + exp + ' 到期，请换新码' }
       return { ok: true, auth: { code: c.code, expire: exp, plan: planFromSuffix(c.sfx) } }
     })
@@ -279,11 +294,25 @@
   }
   function pad(n) { return (n < 10 ? '0' : '') + n }
   function isActive() {
-    return !!(S.auth && S.auth.expire >= today())
+    if (!S.auth) return false
+    if (S.auth.expireAt) return Date.now() <= Date.parse(S.auth.expireAt)
+    return S.auth.expire >= today()
   }
   function daysLeft() {
     if (!S.auth) return 0
     return Math.round((new Date(S.auth.expire + 'T23:59:59') - new Date()) / 86400000)
+  }
+  function fmtDateTime(iso) {
+    var d = new Date(iso)
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
+  }
+  function authLeftText() {
+    if (!S.auth) return ''
+    if (S.auth.expireAt) {
+      var h = Math.max(0, Math.ceil((Date.parse(S.auth.expireAt) - Date.now()) / 3600000))
+      return '剩 ' + h + ' 小时'
+    }
+    return '剩 ' + Math.max(0, daysLeft()) + ' 天'
   }
 
   /* ---------- 全量解密 ---------- */
@@ -710,8 +739,8 @@
     var on = s ? subjectActive(s.id) : false
     var ky = kyOnlyPlan()
     $('meSubj').textContent = s ? ((subjectGroup(s) === 'kaoyan' && mp ? mp.school + ' ' + mp.code + ' · ' : '') + s.name) : '—'
-    $('meStatus').textContent = on ? (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通') : (S.auth ? '当前科目未开通' : '试看中')
-    $('meExpire').textContent = S.auth ? S.auth.expire + '（' + planText(S.auth.plan) + '，剩 ' + Math.max(0, daysLeft()) + ' 天）' : '—'
+    $('meStatus').textContent = on ? (S.auth && S.auth.expireAt ? '体验中' : (daysLeft() <= 7 ? '已开通 · 即将到期' : '已开通')) : (S.auth ? '当前科目未开通' : '试看中')
+    $('meExpire').textContent = S.auth ? (S.auth.expireAt ? fmtDateTime(S.auth.expireAt) + '（' + planText(S.auth.plan) + '，体验授权，' + authLeftText() + '）' : S.auth.expire + '（' + planText(S.auth.plan) + '，' + authLeftText() + '）') : '—'
     $('meVer').textContent = (b && b.meta && b.meta.version) || '—'
     var isKySubj = subjectGroup(s) === 'kaoyan'
     if (ky || (isKySubj && on)) $('contactLine').textContent = CONFIG.CONTACT + '（考研 703 已开通：中药学已上线，药理 / 分析化学整理中）'
@@ -722,7 +751,10 @@
     else { $('buyLink').hidden = true }
     $('cTotal').textContent = totalQ()
     $('cCards').textContent = totalC()
-    if (isActive() && daysLeft() <= 7 && daysLeft() >= 0) {
+    if (isActive() && S.auth.expireAt) {
+      $('topBanner').hidden = false
+      $('topBanner').textContent = '考研 703 中药学体验授权至 ' + fmtDateTime(S.auth.expireAt) + '（' + authLeftText() + '），到期后可用长久开通码继续。'
+    } else if (isActive() && daysLeft() <= 7 && daysLeft() >= 0) {
       $('topBanner').hidden = false
       $('topBanner').textContent = '授权将于 ' + S.auth.expire + ' 到期（剩 ' + daysLeft() + ' 天），联系客服换新码可继续使用。'
     }
@@ -868,31 +900,41 @@
       var raw = $('codeInput').value
       verifyCode(raw).then(function (r) {
         if (!r.ok) { toast(r.msg); return }
+        var isTrial = !!(r.auth && r.auth.expireAt)
+        if (isTrial && isActive() && S.auth && !S.auth.expireAt) {
+          toast('当前已是长久授权，无需使用体验码')
+          return
+        }
         var oldPlan = isActive() ? planOf(S.auth) : []
         var newPlan = planOf(r.auth)
         var merged = 'all'
         var allIds = ['yaoli', 'paozhi', 'jianding', 'zhiwu']
-        if (!(r.auth.plan === 'all' || (S.auth && S.auth.plan === 'all'))) {
-          var both = oldPlan.concat(newPlan)
-          var uniq = []
-          both.forEach(function (x) { if (uniq.indexOf(x) < 0) uniq.push(x) })
-          merged = allIds.every(function (x) { return uniq.indexOf(x) >= 0 }) ? 'all' : uniq
+        if (isTrial) {
+          merged = newPlan
+          S.auth = r.auth
+        } else {
+          if (!(r.auth.plan === 'all' || (S.auth && S.auth.plan === 'all'))) {
+            var both = oldPlan.concat(newPlan)
+            var uniq = []
+            both.forEach(function (x) { if (uniq.indexOf(x) < 0) uniq.push(x) })
+            merged = allIds.every(function (x) { return uniq.indexOf(x) >= 0 }) ? 'all' : uniq
+          }
+          var exp = (S.auth && S.auth.expire > r.auth.expire) ? S.auth.expire : r.auth.expire
+          S.auth = { code: r.auth.code, expire: exp, plan: merged }
         }
-        var exp = (S.auth && S.auth.expire > r.auth.expire) ? S.auth.expire : r.auth.expire
-        S.auth = { code: r.auth.code, expire: exp, plan: merged }
         lsSet(LS.auth, S.auth)
         if (merged !== 'all' && merged.indexOf(subjId()) < 0) pickSubject(merged[0])
         var kyPlan = merged !== 'all' && planIsKy(merged)
-        toast('已开通：' + planText(merged) + '，正在加载资料…')
+        toast(isTrial ? '体验已开通：考研 703 中药学 2 小时' : '已开通：' + planText(merged) + '，正在加载资料…')
         renderSubjChips(); refreshAll()
-        if (kyPlan) { openSheet(); sheet.dir = 'kaoyan'; renderSheet() }
+        if (kyPlan && !isTrial) { openSheet(); sheet.dir = 'kaoyan'; renderSheet() }
         if (kyPlan && !hasKyData()) {
           toast(planText(merged) + '已开通，资料录入后自动出现在选择面板')
           return
         }
         decryptFull().then(function (ok) {
           if (!ok) toast('资料解密失败，请刷新页面重试')
-          else if (kyPlan) toast('考研 703 已开通：中药学 ' + totalQ() + ' 题 / ' + totalC() + ' 卡已解锁；药理、分析化学整理中')
+          else if (kyPlan) toast(isTrial ? '考研 703 中药学 2 小时体验已开启' : '考研 703 已开通：中药学 ' + totalQ() + ' 题 / ' + totalC() + ' 卡已解锁；药理、分析化学整理中')
           else toast('已解锁' + planText(merged) + '：' + totalQ() + ' 题、' + totalC() + ' 张卡')
           renderSubjChips(); refreshAll()
         })
