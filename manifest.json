@@ -1,7 +1,7 @@
 {
-  "build": "2026-11-22z2g",
+  "build": "2026-11-22z2h",
   "default": "yaoli",
-  "totalQ": 9047,
+  "totalQ": 9038,
   "totalC": 2572,
   "subjects": [
     {
@@ -100,7 +100,7 @@
       "short": "方剂",
       "group": "",
       "program": "",
-      "q": 1284,
+      "q": 1275,
       "c": 176,
       "updatedAt": "2026-11-22",
       "freeUnits": [

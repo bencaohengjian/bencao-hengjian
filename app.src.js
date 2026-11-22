@@ -5,11 +5,11 @@
   var CONFIG = {
     CONTACT: '微信：a-Medical-l',
     BUY_URL: 'https://bencaohengjian.github.io/bencao-hengjian/buy.html',
-    TOTAL_Q: 9047,
+    TOTAL_Q: 9038,
     TOTAL_C: 2572,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], jiepou: ['U01', 'U02'], zhx: ['U01', 'U03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'], fangji: ['U00', 'U01'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-22z2g',
+    BUILD: '2026-11-22z2h',
     TRIAL_KEY: 'o6pz4TYFTr9eYZqfQoOu_-3fVBKpKWDs-Imoy_lJsmg',
     RAW_BASE: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/refs/heads/main/',
     NET_TIMEOUT: 15000,
