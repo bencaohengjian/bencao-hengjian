@@ -5,17 +5,18 @@
   var CONFIG = {
     CONTACT: '微信：a-Medical-l',
     BUY_URL: 'https://bencaohengjian.github.io/bencao-hengjian/buy.html',
-    TOTAL_Q: 9038,
-    TOTAL_C: 2572,
-    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], jiepou: ['U01', 'U02'], zhx: ['U01', 'U03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'], fangji: ['U00', 'U01'] },
+    TOTAL_Q: 9724,
+    TOTAL_C: 2746,
+    FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], jiepou: ['U01', 'U02'], zhx: ['U01', 'U03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'], fangji: ['U00', 'U01'], zys202_jc: ['U01', 'U02'], zys202_xg: ['U01', 'U02'], zys202_zy: ['U01', 'U02'], zys202_sj: ['U01', 'U02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-22z2i',
+    BUILD: '2026-11-22z2j',
     TRIAL_KEY: 'o6pz4TYFTr9eYZqfQoOu_-3fVBKpKWDs-Imoy_lJsmg',
     RAW_BASE: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/refs/heads/main/',
     NET_TIMEOUT: 15000,
     DIRECTIONS: [
       { id: 'benke', name: '本科课程', short: '本科' },
-      { id: 'kaoyan', name: '考研', short: '考研' }
+      { id: 'kaoyan', name: '考研', short: '考研' },
+      { id: 'zhicheng', name: '职称中药师', short: '职称' }
     ],
     PROGRAMS: [
       {
@@ -25,6 +26,16 @@
           { id: 'ky703_yx', name: '中药学', short: '中药' },
           { id: 'ky703_yl', name: '中药药理学', short: '药理' },
           { id: 'ky703_fxhx', name: '分析化学', short: '分析' }
+        ]
+      },
+      {
+        id: 'zyys202', group: 'zhicheng', school: '卫生专业技术资格', major: '中药学（师）', code: '202',
+        name: '中药师202 · 初级中药师（202）', short: '中药师202',
+        subjects: [
+          { id: 'zys202_jc', name: '基础知识', short: '基础' },
+          { id: 'zys202_xg', name: '相关专业知识', short: '相关' },
+          { id: 'zys202_zy', name: '专业知识', short: '专业' },
+          { id: 'zys202_sj', name: '专业实践能力', short: '实践' }
         ]
       }
     ]
@@ -95,7 +106,7 @@
     if (!s) return null
     return programById(subjectProgram(s)) || (CONFIG.PROGRAMS[0] || null)
   }
-  function dirOfSubject(s) { return subjectGroup(s) === 'kaoyan' ? 'kaoyan' : 'benke' }
+  function dirOfSubject(s) { var g = subjectGroup(s); return g === 'kaoyan' ? 'kaoyan' : (g === 'zhicheng' ? 'zhicheng' : 'benke') }
   function subjectStats(s) {
     if (!s || s.pending) return { q: 0, c: 0 }
     var q = (s.tiku && s.tiku.meta && s.tiku.meta.total) || s.q || 0
@@ -177,7 +188,7 @@
     var p = currentProgram()
     var prefix = subjectGroup(s) === 'kaoyan' && p ? (p.school + ' ' + p.code + ' · ') : ''
     var st = subjectStats(s)
-    $('ssDir').textContent = subjectGroup(s) === 'kaoyan' ? '考研' : '本科课程'
+    $('ssDir').textContent = subjectGroup(s) === 'kaoyan' ? '考研' : (subjectGroup(s) === 'zhicheng' ? '职称' : '本科课程')
     $('ssName').textContent = prefix + (s.name || s.id)
     var p = S.loadProgress[s.id]
     if (p) $('ssMeta').textContent = progressText(p)
@@ -207,6 +218,9 @@
       var list = subjectList().filter(function (s) { return subjectGroup(s) !== 'kaoyan' })
       body = '<div class="ss-list">' + list.map(subjRowHtml).join('') + '</div>'
       note = '本科七科共用一套授权：单科码开对应一科，全科码七科全开。'
+    } else if (sheet.dir === 'zhicheng') {
+      body = CONFIG.PROGRAMS.filter(function (p) { return p.group === 'zhicheng' }).map(programHtml).join('')
+      note = '职称中药师（202）：总码 Z202 解锁四科，单科码分别对应基础 / 相关 / 专业 / 实践。'
     } else {
       body = CONFIG.PROGRAMS.map(programHtml).join('')
       note = '考研内容按“院校 + 专业 + 科目代码”独立归档，与本科授权分开；资料录入后自动出现在这里。'
@@ -265,6 +279,11 @@
     if (sfx === 'K703L') return ['ky703_yl']
     if (sfx === 'K703F') return ['ky703_fxhx']
     if (sfx === 'FJ') return ['fangji']
+    if (sfx === 'Z202') return ['zys202_jc', 'zys202_xg', 'zys202_zy', 'zys202_sj']
+    if (sfx === 'Z202J') return ['zys202_jc']
+    if (sfx === 'Z202X') return ['zys202_xg']
+    if (sfx === 'Z202Z') return ['zys202_zy']
+    if (sfx === 'Z202S') return ['zys202_sj']
     if (sfx === 'K703') return ['ky703_yx', 'ky703_yl', 'ky703_fxhx']
     var mp = { Y: 'yaoli', P: 'paozhi', J: 'jianding', Z: 'zhiwu', X: 'jiepou', H: 'zhx' }
     var arr = sfx.split('').map(function (c) { return mp[c] }).filter(Boolean)
@@ -299,9 +318,11 @@
   function planText(plan) {
     var all = ['yaoli', 'paozhi', 'jianding', 'zhiwu', 'jiepou', 'zhx', 'fangji']
     var nm = { yaoli: '中药药理学', paozhi: '中药炮制学', jianding: '中药鉴定学', zhiwu: '药用植物学', jiepou: '人体解剖生理学', zhx: '中药化学',
-      ky703_yx: '中药学', ky703_yl: '中药药理学', ky703_fxhx: '分析化学', fangji: '方剂学' }
+      ky703_yx: '中药学', ky703_yl: '中药药理学', ky703_fxhx: '分析化学', fangji: '方剂学',
+      zys202_jc: '基础知识', zys202_xg: '相关专业知识', zys202_zy: '专业知识', zys202_sj: '专业实践能力' }
     if (plan === 'all' || (Array.isArray(plan) && all.every(function (x) { return plan.indexOf(x) >= 0 }))) return '全科'
     if (Array.isArray(plan) && plan.length === 3 && plan.indexOf('ky703_yx') >= 0 && plan.indexOf('ky703_yl') >= 0 && plan.indexOf('ky703_fxhx') >= 0) return '考研 703 三科'
+    if (Array.isArray(plan) && plan.length === 4 && plan.every(function (x) { return /^zys202_/.test(x) })) return '中药师202 四科'
     return (Array.isArray(plan) ? plan : all).map(function (x) { return nm[x] || x }).join('、')
   }
   function keyringId(code) {

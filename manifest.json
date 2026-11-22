@@ -1,8 +1,8 @@
 {
-  "build": "2026-11-22z2i",
+  "build": "2026-11-22z2j",
   "default": "yaoli",
-  "totalQ": 9038,
-  "totalC": 2572,
+  "totalQ": 9724,
+  "totalC": 2746,
   "subjects": [
     {
       "id": "yaoli",
@@ -130,7 +130,7 @@
       "short": "药理",
       "group": "kaoyan",
       "program": "hnucm-703",
-      "q": 468,
+      "q": 342,
       "c": 96,
       "updatedAt": "2026-11-21",
       "freeUnits": [
@@ -153,6 +153,66 @@
         "A02"
       ],
       "trial": "trial_ky703_fxhx.enc"
+    },
+    {
+      "id": "zys202_jc",
+      "name": "基础知识",
+      "short": "基础",
+      "group": "zhicheng",
+      "program": "zyys202",
+      "q": 184,
+      "c": 39,
+      "updatedAt": "2026-11-22",
+      "freeUnits": [
+        "U01",
+        "U02"
+      ],
+      "trial": "trial_zys202_jc.enc"
+    },
+    {
+      "id": "zys202_xg",
+      "name": "相关专业知识",
+      "short": "相关",
+      "group": "zhicheng",
+      "program": "zyys202",
+      "q": 217,
+      "c": 54,
+      "updatedAt": "2026-11-22",
+      "freeUnits": [
+        "U01",
+        "U02"
+      ],
+      "trial": "trial_zys202_xg.enc"
+    },
+    {
+      "id": "zys202_zy",
+      "name": "专业知识",
+      "short": "专业",
+      "group": "zhicheng",
+      "program": "zyys202",
+      "q": 222,
+      "c": 42,
+      "updatedAt": "2026-11-22",
+      "freeUnits": [
+        "U01",
+        "U02"
+      ],
+      "trial": "trial_zys202_zy.enc"
+    },
+    {
+      "id": "zys202_sj",
+      "name": "专业实践能力",
+      "short": "实践",
+      "group": "zhicheng",
+      "program": "zyys202",
+      "q": 189,
+      "c": 39,
+      "updatedAt": "2026-11-22",
+      "freeUnits": [
+        "U01",
+        "U02"
+      ],
+      "trial": "trial_zys202_sj.enc"
     }
   ]
 }
