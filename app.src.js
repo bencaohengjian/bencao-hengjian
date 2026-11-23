@@ -9,7 +9,7 @@
     TOTAL_C: 2746,
     FREE_UNITS: { yaoli: ['U01', 'U02'], paozhi: ['P01', 'P02'], jianding: ['U01', 'U02'], zhiwu: ['Z01', 'Z02'], jiepou: ['U01', 'U02'], zhx: ['U01', 'U03'], ky703_yx: ['U00', 'U01'], ky703_yl: ['U00', 'U01'], ky703_fxhx: ['A01', 'A02'], fangji: ['U00', 'U01'], zys202_jc: ['U01', 'U02'], zys202_xg: ['U01', 'U02'], zys202_zy: ['U01', 'U02'], zys202_sj: ['U01', 'U02'] },
     FREE_CHAPTERS: 2,
-    BUILD: '2026-11-22z2l',
+    BUILD: '2026-11-22z2m',
     TRIAL_KEY: 'o6pz4TYFTr9eYZqfQoOu_-3fVBKpKWDs-Imoy_lJsmg',
     RAW_BASE: 'https://raw.githubusercontent.com/bencaohengjian/bencao-hengjian/refs/heads/main/',
     NET_TIMEOUT: 15000,
